@@ -1,25 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
+import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
+import { AuthProvider } from "@/providers/AuthProvider";
+import { Toaster } from "sonner";
+
 const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
   variable: "--font-space-grotesk",
-  subsets: ["latin"],
-});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "RENOVA - The Future of Repair Services",
-  description: "Trusted local technicians powered by real-time booking, live tracking, and premium repair experiences.",
+  title: "RENOVA",
+  description: "Futuristic Repair Marketplace",
 };
 
 export default function RootLayout({
@@ -28,11 +22,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} h-full antialiased dark`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className={`${spaceGrotesk.variable}`}>
+      <body className="font-sans antialiased">
+        <AuthProvider>
+          {children}
+          <Toaster
+            richColors
+            closeButton
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: "#0b1020",
+                color: "#ffffff",
+                border: "1px solid rgba(255,255,255,0.12)",
+              },
+            }}
+          />
+        </AuthProvider>
+      </body>
     </html>
   );
 }

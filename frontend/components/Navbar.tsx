@@ -4,59 +4,106 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import GooeyNav from "@/components/GooeyNav";
+import Logo from "@/components/Logo";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const navItems = [
+    { label: "Home", href: "/", sectionId: "home" },
+    { label: "Services", href: "/services", sectionId: "services" },
+    { label: "Technicians", href: "/technicians", sectionId: "technicians" },
+    { label: "Reviews", href: "/reviews", sectionId: "reviews" },
+    { label: "Contacts", href: "/contacts", sectionId: "contacts" },
+  ];
 
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
     };
+
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    handleScroll(); // Initial check
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
-  const navItems = [
-    { label: "Home", href: "#" },
-    { label: "Services", href: "#services" },
-    { label: "Contacts", href: "#contacts" },
-    { label: "Reviews", href: "#reviews" },
-  ];
+  // Intersection Observer for active section detection
+  useEffect(() => {
+    const observerOptions = {
+      root: null,
+      rootMargin: "-50% 0px -50% 0px",
+      threshold: 0,
+    };
+
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const sectionId = entry.target.id;
+          const index = navItems.findIndex((item) => item.sectionId === sectionId);
+          if (index !== -1) {
+            setActiveIndex(index);
+          }
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    // Observe all sections
+    navItems.forEach((item) => {
+      const section = document.getElementById(item.sectionId);
+      if (section) {
+        observer.observe(section);
+      }
+    });
+
+    return () => {
+      navItems.forEach((item) => {
+        const section = document.getElementById(item.sectionId);
+        if (section) {
+          observer.unobserve(section);
+        }
+      });
+    };
+  }, []);
 
   return (
     <motion.nav
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-in-out ${
-        scrolled
-          ? "bg-[#050816]/70 backdrop-blur-md border-b border-[#5227FF]/20 shadow-[0_4px_30px_rgba(82,39,255,0.1)] py-4"
-          : "bg-transparent py-6"
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-in-out ${scrolled ? "py-4" : "py-6"
+        }`}
     >
-      <div className="w-full px-8 md:px-16 flex items-center justify-between">
+      {/* Separate Background Layer to prevent mix-blend-mode compositing bugs */}
+      <div
+        className={`absolute inset-0 transition-all duration-500 -z-10 ${scrolled
+            ? "bg-[#050816]/70 backdrop-blur-md border-b border-[#5227FF]/20 shadow-[0_4px_30px_rgba(82,39,255,0.1)]"
+            : "bg-transparent"
+          }`}
+      />
+
+      <div className="w-full px-8 md:px-16 flex items-center justify-between relative">
         {/* LEFT: Logo */}
-        <Link href="/" className="relative group flex items-center z-50">
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="text-2xl md:text-3xl font-bold tracking-tighter text-white"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            RENOVA
-            <span className="text-[#00F5FF]">.</span>
-          </motion.div>
-          <div className="absolute -inset-2 bg-[#5227FF]/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-        </Link>
+        <a href="/" className="z-50">
+          <Logo />
+        </a>
 
         {/* CENTER: GooeyNav */}
         <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2">
           <div className="relative">
-             <GooeyNav
+            <GooeyNav
               items={navItems}
               particleCount={15}
               particleDistances={[90, 10]}
               particleR={100}
               initialActiveIndex={0}
+              currentActiveIndex={activeIndex}
               animationTime={600}
               timeVariance={300}
               colors={[1, 2, 3, 1, 2, 3, 1, 4]}
@@ -66,7 +113,7 @@ export default function Navbar() {
 
         {/* RIGHT: Buttons */}
         <div className="hidden lg:flex items-center gap-8 z-50 ml-auto">
-          <Link
+          <a
             href="/login"
             className="relative group px-5 py-2 rounded-full border border-[#5227FF]/50 text-white font-medium text-sm overflow-hidden"
           >
@@ -74,8 +121,8 @@ export default function Navbar() {
             <span className="relative z-10 group-hover:text-[#00F5FF] transition-colors duration-300">
               Login
             </span>
-          </Link>
-          <Link
+          </a>
+          <a
             href="/signup"
             className="relative group px-5 py-2 rounded-full border border-[#5227FF]/50 text-white font-medium text-sm overflow-hidden"
           >
@@ -83,7 +130,7 @@ export default function Navbar() {
             <span className="relative z-10 group-hover:text-[#00F5FF] transition-colors duration-300">
               Sign Up
             </span>
-          </Link>
+          </a>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

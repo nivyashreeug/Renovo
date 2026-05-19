@@ -46,7 +46,7 @@ export default function Hero() {
           className="w-full max-w-3xl flex justify-center mb-6"
         >
           <TextPressure
-            text="RENOVA"
+            text="RENOVO"
             flex
             alpha={false}
             stroke={false}
@@ -67,7 +67,7 @@ export default function Hero() {
           className="flex flex-col items-center text-center space-y-6 max-w-3xl"
         >
           <div className="inline-block px-8 py-3 rounded-full bg-[#00F5FF]/10 border border-[#00F5FF]/30 backdrop-blur-md shadow-[0_0_20px_rgba(0,245,255,0.2)]">
-            <h2 className="text-[#00F5FF] font-bold tracking-[0.2em] text-sm md:text-base uppercase drop-shadow-[0_0_8px_rgba(0,245,255,0.8)]">
+            <h2 className="text-[#00F5FF] font-bold tracking-[0.2em] text-sm md:text-base uppercase">
               The Future of Repair Services
             </h2>
           </div>
