@@ -106,7 +106,7 @@ export default function SignupPage() {
     setIsSubmitting(true);
 
     try {
-      const loginRedirectUrl = buildAuthUrl("/login");
+      const loginRedirectUrl = "https://renovo-gilt.vercel.app/login/callback";
 
       if (!loginRedirectUrl) {
         throw new Error("Missing base URL for auth redirects. Set NEXT_PUBLIC_SITE_URL in production.");
