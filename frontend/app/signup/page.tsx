@@ -14,7 +14,7 @@ import {
   getDashboardRouteFromRole,
   syncProfileFromAuthUser,
 } from "@/lib/dashboard-routing";
-import { buildAuthUrl, validateAuthUrl } from "@/lib/auth-urls";
+import { buildAuthUrl } from "@/lib/auth-urls";
 import { supabase } from "@/lib/supabase";
 
 export default function SignupPage() {
@@ -106,7 +106,7 @@ export default function SignupPage() {
     setIsSubmitting(true);
 
     try {
-      const loginRedirectUrl = validateAuthUrl(buildAuthUrl("/login"), "signup emailRedirectTo");
+      const loginRedirectUrl = buildAuthUrl("/login");
 
       // CREATE AUTH USER
       const { data, error } =
