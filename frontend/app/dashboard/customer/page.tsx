@@ -16,9 +16,11 @@ import BookingCard from "@/components/dashboard/BookingCard";
 import ActivityTimeline from "@/components/dashboard/ActivityTimeline";
 import NotificationPanel from "@/components/dashboard/NotificationPanel";
 import QuickActions from "@/components/dashboard/QuickActions";
+import ReviewComposer from "@/components/dashboard/ReviewComposer";
 import PaymentOverview from "@/components/dashboard/PaymentOverview";
 import ProfileCard from "@/components/dashboard/ProfileCard";
 import SupportPanel from "@/components/dashboard/SupportPanel";
+import AIRepairHealthIntelligence from "@/components/dashboard/AIRepairHealthIntelligence";
 
 import {
     Wrench,
@@ -34,6 +36,8 @@ import {
     Car,
     ShieldAlert,
     MessageSquare,
+    Sparkles,
+    RefreshCw,
 } from "lucide-react";
 import { useMemo } from "react";
 
@@ -47,6 +51,7 @@ type BookingRecord = {
     booking_time: string;
     price: string | number;
     status: string;
+    payment_status?: string;
     refund_status?: string;
     refund_amount?: number;
     refund_note?: string;
@@ -89,6 +94,10 @@ function isCanceledBooking(status: string) {
 
 function isActiveBooking(status: string) {
     return !isCompletedBooking(status) && !isCanceledBooking(status);
+}
+
+function isSettledBooking(booking: BookingRecord) {
+    return booking.payment_status === "Paid" || isCompletedBooking(booking.status) || booking.status === "Paid";
 }
 
 function formatBookingDate(value: string) {
@@ -139,18 +148,30 @@ function formatRelativeTime(value: string) {
 export default function CustomerDashboard() {
 
     const router = useRouter();
-    const { syncVersion, lastSyncedAt: sharedLastSyncedAt } = useCustomerRealtime();
+    const {
+        bookings: liveBookings,
+        lastSyncedAt,
+        latestEvent,
+        notifications,
+        unreadCount,
+        activities,
+        trackingBooking,
+        loadingBookings,
+        streamError,
+        isConnected,
+        retrySync,
+        markNotificationRead,
+        markAllNotificationsRead,
+    } = useCustomerRealtime();
 
     const {
         user,
         profile,
         loading,
     } = useAuth();
-    console.log(user?.id);
 
     // BOOKINGS STATE
     const [bookings, setBookings] = useState<BookingRecord[]>([]);
-    const [lastSyncedAt, setLastSyncedAt] = useState<string>("");
     const [bookingAction, setBookingAction] = useState<{
         open: boolean;
         kind: BookingActionKind;
@@ -174,141 +195,44 @@ export default function CustomerDashboard() {
 
     }, [loading, user, router]);
 
-    // FETCH BOOKINGS
     useEffect(() => {
+        const timeout = setTimeout(() => {
+            setBookings(liveBookings as BookingRecord[]);
+        }, 0);
 
-        const fetchBookings = async () => {
-
-            if (!user) return;
-
-            const { data, error } =
-                await supabase
-                    .from("bookings")
-                    .select("*")
-                    .eq("customer_id", user.id)
-                    .order("created_at", {
-                        ascending: false,
-                    });
-
-            if (error) {
-
-                console.error(
-                    "Error fetching bookings:",
-                    error.message
-                );
-
-                return;
-            }
-
-            setBookings(data || []);
-            setLastSyncedAt(sharedLastSyncedAt || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
-        };
-
-        void fetchBookings();
-
-    }, [user, syncVersion, sharedLastSyncedAt]);
+        return () => clearTimeout(timeout);
+    }, [liveBookings]);
 
     const totalSpent = useMemo(() => {
         return bookings
-            .filter((booking) => isCompletedBooking(booking.status) || booking.status === "Paid")
+            .filter((booking) => isSettledBooking(booking))
             .reduce((sum, booking) => sum + Number(booking.price || 0), 0);
     }, [bookings]);
 
     const pendingTotal = useMemo(() => {
         return bookings
-            .filter((booking) => isActiveBooking(booking.status))
+            .filter((booking) => isActiveBooking(booking.status) && !isSettledBooking(booking))
             .reduce((sum, booking) => sum + Number(booking.price || 0), 0);
     }, [bookings]);
 
-    const notifications = useMemo<DashboardNotification[]>(() => {
-        if (bookings.length === 0) {
-            return [
-                {
-                    id: "welcome",
-                    title: "Welcome to your dashboard",
-                    desc: "Your repairs, payments, and support will appear here in realtime.",
-                    time: "Now",
-                    icon: MessageSquare,
-                    color: "text-[#00F5FF]",
-                    bg: "bg-[#00F5FF]/10",
-                    unread: true,
-                },
-            ];
+    const notificationFeed = useMemo<DashboardNotification[]>(() => {
+        if (notifications.length > 0) {
+            return notifications.slice(0, 6);
         }
 
-        return bookings.slice(0, 3).map((booking) => {
-            const isPaid = booking.status === "Paid" || booking.status === "Completed";
-            const isRefunded = booking.status === "Refunded" || booking.status === "Refund Initiated";
-            const isCancelled = booking.status === "Cancelled";
-
-            return {
-                id: String(booking.id),
-                title: isPaid
-                    ? "Payment confirmed"
-                    : isCancelled
-                        ? "Booking cancelled"
-                        : isRefunded
-                            ? "Refund in progress"
-                            : "Booking update",
-                desc: `${booking.service_name} • ${booking.technician_name || "Technician assigned soon"}`,
-                time: formatRelativeTime(booking.booking_date),
-                icon: isCancelled ? ShieldAlert : isPaid ? CheckCircle : Car,
-                color: isCancelled ? "text-[#FF4D6D]" : isPaid ? "text-[#00FFA3]" : "text-[#00F5FF]",
-                bg: isCancelled ? "bg-[#FF4D6D]/10" : isPaid ? "bg-[#00FFA3]/10" : "bg-[#00F5FF]/10",
-                unread: !isPaid,
-            };
-        });
-    }, [bookings]);
-
-    const activityFeed = useMemo<DashboardActivity[]>(() => {
-        if (bookings.length === 0) {
-            return [
-                {
-                    id: "empty-activity",
-                    title: "No service history yet",
-                    desc: "Once you book a repair, the timeline will populate here.",
-                    time: "Now",
-                    icon: MessageSquare,
-                    color: "text-white/60",
-                    bg: "bg-white/5",
-                    border: "border-white/10",
-                },
-            ];
-        }
-
-        return bookings.slice(0, 4).map((booking) => {
-            const icon = booking.status === "Paid" || booking.status === "Completed"
-                ? CreditCard
-                : booking.status === "Rescheduled"
-                    ? Wrench
-                    : booking.status === "Cancelled"
-                        ? ShieldAlert
-                        : MessageSquare;
-
-            return {
-                id: String(booking.id),
-                title: booking.status === "Paid" ? "Payment confirmed" : booking.status,
-                desc: `${booking.service_name} • ${booking.technician_name || "Technician assigned soon"}`,
-                time: formatRelativeTime(booking.booking_date),
-                icon,
-                color: booking.status === "Paid" || booking.status === "Completed"
-                    ? "text-[#00FFA3]"
-                    : booking.status === "Cancelled"
-                        ? "text-[#FF4D6D]"
-                        : "text-[#00F5FF]",
-                bg: booking.status === "Paid" || booking.status === "Completed"
-                    ? "bg-[#00FFA3]/10"
-                    : booking.status === "Cancelled"
-                        ? "bg-[#FF4D6D]/10"
-                        : "bg-[#00F5FF]/10",
-                border: booking.status === "Paid" || booking.status === "Completed"
-                    ? "border-[#00FFA3]/30"
-                    : booking.status === "Cancelled"
-                        ? "border-[#FF4D6D]/30"
-                        : "border-[#00F5FF]/30",
-            };
-        });
-    }, [bookings]);
+        return [
+            {
+                id: "welcome",
+                title: "Smart alert center ready",
+                desc: "You will receive live updates for bookings, repairs, and payments here.",
+                time: "Now",
+                icon: Sparkles,
+                color: "text-[#00F5FF]",
+                bg: "bg-[#00F5FF]/10",
+                unread: true,
+            },
+        ];
+    }, [notifications]);
 
     const openBookingAction = (booking: BookingRecord, kind: Exclude<BookingActionKind, null>) => {
         const defaults = getRescheduleDefaults(booking);
@@ -418,15 +342,25 @@ export default function CustomerDashboard() {
     };
 
     // LOADING SCREEN
-    if (loading) {
+    if (loading || loadingBookings) {
 
         return (
-            <main className="min-h-screen bg-[#050816] flex items-center justify-center text-white">
-
-                <h1 className="text-3xl font-bold animate-pulse">
-                    Loading Dashboard...
-                </h1>
-
+            <main className="min-h-screen bg-[#050816] px-6 py-10 text-white">
+                <div className="mx-auto max-w-7xl space-y-6">
+                    <div className="h-48 rounded-[36px] border border-white/10 bg-white/5 animate-pulse" />
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        {[...Array.from({ length: 4 })].map((_, index) => (
+                            <div key={index} className="h-32 rounded-3xl border border-white/10 bg-white/5 animate-pulse" />
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+                        <div className="xl:col-span-2 h-96 rounded-3xl border border-white/10 bg-white/5 animate-pulse" />
+                        <div className="space-y-6">
+                            <div className="h-56 rounded-3xl border border-white/10 bg-white/5 animate-pulse" />
+                            <div className="h-56 rounded-3xl border border-white/10 bg-white/5 animate-pulse" />
+                        </div>
+                    </div>
+                </div>
             </main>
         );
     }
@@ -450,6 +384,19 @@ export default function CustomerDashboard() {
             <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-size-[40px_40px]" />
 
             <div className="relative z-10 max-w-7xl mx-auto space-y-10">
+
+                {streamError && (
+                    <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-[#FFB020]/30 bg-[#FFB020]/10 px-5 py-4">
+                        <p className="text-sm text-white/80">{streamError}</p>
+                        <button
+                            type="button"
+                            onClick={() => void retrySync()}
+                            className="inline-flex items-center gap-2 rounded-xl border border-[#FFB020]/40 bg-[#FFB020]/15 px-4 py-2 text-sm font-semibold text-[#FFCF73] hover:bg-[#FFB020]/25 transition-colors"
+                        >
+                            <RefreshCw size={14} /> Retry live sync
+                        </button>
+                    </div>
+                )}
 
                 {/* HERO SECTION */}
                 <motion.div
@@ -489,6 +436,27 @@ export default function CustomerDashboard() {
                             <p className="text-cyan-400 mt-1">
                                 {user?.email}
                             </p>
+
+                            {latestEvent && (
+                                <div className="mt-6 inline-flex max-w-2xl items-center gap-4 rounded-3xl border border-[#00F5FF]/20 bg-[#00F5FF]/10 px-4 py-4 text-left backdrop-blur-xl">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#00F5FF]/20 bg-[#050816]/70 text-[#00F5FF] shadow-[0_0_24px_rgba(0,245,255,0.18)]">
+                                        <Sparkles size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs uppercase tracking-[0.28em] text-[#00F5FF]">Live booking sync</p>
+                                        <p className="mt-1 text-sm font-semibold text-white">{latestEvent.title}</p>
+                                        <p className="mt-1 text-sm text-white/65">{latestEvent.description}</p>
+                                        <div className="mt-2 flex items-center gap-3 text-xs text-white/45">
+                                            <span>{latestEvent.time}</span>
+                                            {latestEvent.status && (
+                                                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-white/60">
+                                                    {latestEvent.status}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="mt-6 inline-flex items-center rounded-full border border-[#00FFA3]/20 bg-[#00FFA3]/10 px-4 py-2 text-[#00FFA3]">
                                 {profile?.role}
@@ -598,7 +566,7 @@ export default function CustomerDashboard() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.5 }}
                         >
-                            <TrackingCard />
+                            <TrackingCard booking={trackingBooking || bookings[0]} isConnected={isConnected} />
                         </motion.div>
 
                         {/* QUICK ACTIONS */}
@@ -612,8 +580,31 @@ export default function CustomerDashboard() {
                                 Quick Actions
                             </h3>
 
-                            <QuickActions />
+                            <QuickActions bookings={bookings} />
 
+                        </motion.div>
+
+                        {/* REVIEWS */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.65 }}
+                        >
+                            <div className="mb-5 flex items-center justify-between gap-4">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-white">Write a Review</h3>
+                                    <p className="mt-1 text-white/60">Post your own feedback about a completed repair.</p>
+                                </div>
+                                <div className="rounded-full border border-[#00F5FF]/20 bg-[#00F5FF]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#00F5FF]">
+                                    Live Reviews
+                                </div>
+                            </div>
+
+                            <ReviewComposer
+                                customerId={user?.id}
+                                customerName={profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Customer"}
+                                bookings={bookings}
+                            />
                         </motion.div>
 
                         {/* BOOKINGS */}
@@ -678,16 +669,25 @@ export default function CustomerDashboard() {
 
                                 ) : (
 
-                                    <div className="col-span-2 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-10 text-center">
+                                    <div className="col-span-2 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-10 text-center relative overflow-hidden">
+
+                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,245,255,0.14),transparent_55%)]" />
 
                                         <h3 className="text-2xl font-bold text-white">
-                                            No Bookings Yet
+                                            Your smart repair ecosystem is ready
                                         </h3>
 
                                         <p className="mt-3 text-white/60">
-                                            Your upcoming repair bookings
-                                            will appear here.
+                                            No active bookings yet. Start a repair request to activate live tracking, alerts, and AI diagnostics.
                                         </p>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => router.push("/booking")}
+                                            className="relative mt-6 rounded-2xl border border-[#00F5FF]/35 bg-[#00F5FF]/15 px-5 py-3 text-sm font-semibold text-[#9ff9ff] hover:bg-[#00F5FF]/25 transition-colors"
+                                        >
+                                            Launch New Repair
+                                        </button>
 
                                     </div>
 
@@ -726,7 +726,12 @@ export default function CustomerDashboard() {
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.8 }}
                         >
-                                <NotificationPanel notifications={notifications} newCount={notifications.filter((notification) => notification.unread).length} />
+                                <NotificationPanel
+                                    notifications={notificationFeed}
+                                    newCount={unreadCount}
+                                    onNotificationRead={markNotificationRead}
+                                    onMarkAllRead={markAllNotificationsRead}
+                                />
                         </motion.div>
 
                         <motion.div
@@ -734,7 +739,7 @@ export default function CustomerDashboard() {
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.9 }}
                         >
-                                <ActivityTimeline activities={activityFeed} />
+                            <ActivityTimeline activities={activities} />
                         </motion.div>
 
                             <motion.div
@@ -749,7 +754,7 @@ export default function CustomerDashboard() {
                                         <p className="mt-1 text-sm text-white/60">Booking updates, payment changes, and refunds are streaming in live.</p>
                                     </div>
                                     <div className="rounded-full border border-[#00FFA3]/20 bg-[#00FFA3]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#00FFA3]">
-                                        Live
+                                        {isConnected ? "Live" : "Retrying"}
                                     </div>
                                 </div>
                                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-white/70">
@@ -770,6 +775,30 @@ export default function CustomerDashboard() {
                     </div>
 
                 </div>
+
+                <div className="relative py-4">
+                    <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-linear-to-r from-transparent via-white/12 to-transparent" />
+                    <motion.div
+                        aria-hidden="true"
+                        animate={{ x: [0, 180, 0], opacity: [0.2, 0.7, 0.2] }}
+                        transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
+                        className="absolute left-0 top-1/2 h-px w-40 -translate-y-1/2 bg-linear-to-r from-transparent via-[#00F5FF]/70 to-transparent blur-[1px]"
+                    />
+                    <div className="relative mx-auto inline-flex w-full items-center justify-center">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-[#00F5FF]/20 bg-[#00F5FF]/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#00F5FF] backdrop-blur-md shadow-[0_0_24px_rgba(0,245,255,0.08)]">
+                            <Sparkles size={12} /> RENOVA AI
+                        </div>
+                    </div>
+                </div>
+
+                {/* AI REPAIR HEALTH INTELLIGENCE */}
+                <motion.div
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.18, duration: 0.8 }}
+                >
+                    <AIRepairHealthIntelligence />
+                </motion.div>
 
             </div>
 

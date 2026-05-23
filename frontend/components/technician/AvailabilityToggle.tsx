@@ -1,45 +1,23 @@
 "use client"
-import React, { useEffect, useState } from "react"
+import React, { useState } from "react"
 import { motion } from "framer-motion"
-import { supabase } from "@/lib/supabase"
-import { useAuth } from "@/providers/AuthProvider"
-import { toast } from "sonner"
 import { Radio, RadioOff } from "lucide-react"
+import { useTechnicianRealtime } from "@/components/technician/TechnicianRealtimeProvider"
 
 type Props = {
   compact?: boolean
 }
 
 export default function AvailabilityToggle({ compact = false }: Props) {
-  const [online, setOnline] = useState(true)
   const [saving, setSaving] = useState(false)
-  const { user } = useAuth()
-
-  useEffect(() => {
-    let mounted = true
-    async function load() {
-      const id = user?.id
-      if (!id) return
-      const { data } = await supabase.from("profiles").select("is_available").eq("id", id).single()
-      if (!mounted) return
-      setOnline(Boolean(data?.is_available))
-    }
-    load()
-    return () => { mounted = false }
-  }, [user])
+  const { isAvailable, setAvailability } = useTechnicianRealtime()
+  const online = isAvailable
 
   async function toggle() {
-    const id = user?.id
-    if (!id) return
     setSaving(true)
-    setOnline((v) => !v)
-    const { error } = await supabase.from("profiles").update({ is_available: !online }).eq("id", id)
+    const next = !online
+    await setAvailability(next)
     setSaving(false)
-    if (error) {
-      toast.error("Could not update availability.")
-      return
-    }
-    toast.success(!online ? "🟢 You are online and receiving jobs" : "🔴 You are offline and the queue is paused")
   }
 
   return (

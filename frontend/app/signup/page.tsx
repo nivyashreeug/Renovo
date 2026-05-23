@@ -5,13 +5,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import gsap from "gsap";
 import {
   User, Mail, Lock, Wrench, ShieldCheck, CheckCircle2, AlertCircle,
-  Eye, EyeOff, Loader2, ArrowRight, ArrowLeft, Activity, Zap
+  Eye, EyeOff, Loader2, ArrowRight, ArrowLeft, Zap
 } from "lucide-react";
 import Link from "next/link";
-import Logo from "@/components/Logo";
+import { useRouter } from "next/navigation";
+import Logo from "@/components/shared/Logo";
+import {
+  getDashboardRouteFromRole,
+  syncProfileFromAuthUser,
+} from "@/lib/dashboard-routing";
 import { supabase } from "@/lib/supabase";
 
 export default function SignupPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -24,14 +30,13 @@ export default function SignupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const [isMounted] = useState(true);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const blob1Ref = useRef<HTMLDivElement>(null);
   const blob2Ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setIsMounted(true);
     // GSAP background animations
     const ctx = gsap.context(() => {
       gsap.to(blob1Ref.current, {
@@ -100,6 +105,11 @@ export default function SignupPage() {
     setIsSubmitting(true);
 
     try {
+      const siteUrl =
+        typeof window !== "undefined"
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
       // CREATE AUTH USER
       const { data, error } =
         await supabase.auth.signUp({
@@ -107,8 +117,7 @@ export default function SignupPage() {
           password: formData.password,
 
           options: {
-            emailRedirectTo:
-              "http://localhost:3000/login",
+            emailRedirectTo: `${siteUrl}/login`,
 
             data: {
               full_name: formData.fullName,
@@ -121,35 +130,38 @@ export default function SignupPage() {
         setErrors({
           email: error.message,
         });
-
-        setIsSubmitting(false);
         return;
       }
 
-      // STORE USER PROFILE
       if (data.user) {
-        const { error: profileError } =
-          await supabase
-            .from("profiles")
-            .insert([
-              {
-                id: data.user.id,
-                full_name:
-                  formData.fullName,
-                email: formData.email,
-                role: formData.role,
-              },
-            ]);
+        const targetRoute = getDashboardRouteFromRole(formData.role);
 
-        if (profileError) {
-          console.error(profileError);
+        // Do not block navigation on profile sync.
+        void syncProfileFromAuthUser(
+          data.user,
+          formData.fullName,
+          formData.role
+        );
+
+        if (data.session) {
+          router.replace(targetRoute);
+          return;
+        }
+
+        // Fallback: if signUp returned no session, try immediate sign-in.
+        const { data: loginData } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+
+        if (loginData.session) {
+          router.replace(targetRoute);
+          return;
         }
       }
 
       setIsSuccess(true);
-    } catch (err) {
-      console.error(err);
-
+    } catch {
       setErrors({
         email:
           "Something went wrong. Please try again.",
@@ -174,19 +186,19 @@ export default function SignupPage() {
       <div className="relative w-full lg:w-1/2 min-h-[50vh] lg:min-h-screen flex flex-col justify-between p-8 lg:p-16 z-10 overflow-hidden border-b lg:border-b-0 lg:border-r border-[#5227FF]/20">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#050816]/40 via-[#050816] to-[#050816]" />
-          <div ref={blob1Ref} className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#5227FF] rounded-full blur-[120px] opacity-20 mix-blend-screen pointer-events-none" />
-          <div ref={blob2Ref} className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-[#00F5FF] rounded-full blur-[100px] opacity-10 mix-blend-screen pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,var(--tw-gradient-stops))] from-[#050816]/40 via-[#050816] to-[#050816]" />
+          <div ref={blob1Ref} className="absolute top-1/4 left-1/4 w-125 h-125 bg-[#5227FF] rounded-full blur-[120px] opacity-20 mix-blend-screen pointer-events-none" />
+          <div ref={blob2Ref} className="absolute bottom-1/4 right-1/4 w-100 h-100 bg-[#00F5FF] rounded-full blur-[100px] opacity-10 mix-blend-screen pointer-events-none" />
           {/* Cyber grid */}
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: "linear-gradient(rgba(255, 255, 255, 1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 1) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050816] via-transparent to-[#050816] pointer-events-none" />
+          <div className="absolute inset-0 bg-linear-to-t from-[#050816] via-transparent to-[#050816] pointer-events-none" />
         </div>
 
         {/* Top: Navigation & Logo */}
         <div className="relative z-20 flex items-center gap-5">
           <Link
             href="/"
-            className="group flex items-center justify-center w-10 h-10 rounded-full bg-white/[0.03] border border-white/10 hover:bg-white/[0.08] hover:border-[#00F5FF]/30 hover:shadow-[0_0_15px_rgba(0,245,255,0.15)] transition-all duration-300 backdrop-blur-md"
+            className="group flex items-center justify-center w-10 h-10 rounded-full bg-white/3 border border-white/10 hover:bg-white/8 hover:border-[#00F5FF]/30 hover:shadow-[0_0_15px_rgba(0,245,255,0.15)] transition-all duration-300 backdrop-blur-md"
             title="Back to Home"
           >
             <ArrowLeft className="w-4 h-4 text-white/60 group-hover:text-[#00F5FF] transition-all group-hover:-translate-x-0.5 duration-300" />
@@ -212,7 +224,7 @@ export default function SignupPage() {
             </div>
 
             <h1 className="text-4xl lg:text-6xl font-bold leading-tight mb-6 tracking-tight">
-              Join the <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#5227FF] to-[#00F5FF]">Future</span><br />
+              Join the <span className="text-transparent bg-clip-text bg-linear-to-r from-[#5227FF] to-[#00F5FF]">Future</span><br />
               of Repair Services
             </h1>
 
@@ -222,7 +234,7 @@ export default function SignupPage() {
           </motion.div>
 
           {/* Professional Floating Visuals */}
-          <div className="mt-12 relative h-[280px] hidden sm:block">
+          <div className="mt-12 relative h-70 hidden sm:block">
             {/* Main Image */}
             <motion.div
               animate={{ y: [-10, 10, -10] }}
@@ -230,7 +242,7 @@ export default function SignupPage() {
               className="absolute top-0 left-0 w-64 h-48 rounded-2xl overflow-hidden border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-10"
             >
               <img src="https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Professional Repair" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#050816] via-transparent to-transparent opacity-80" />
+              <div className="absolute inset-0 bg-linear-to-t from-[#050816] via-transparent to-transparent opacity-80" />
             </motion.div>
 
             {/* Floating Image 2 */}
@@ -298,7 +310,7 @@ export default function SignupPage() {
         {/* Subtle Form Background Glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 bg-[#5227FF]/10 rounded-[100px] blur-[100px] pointer-events-none" />
 
-        <div className="w-full max-w-[380px] relative z-10">
+        <div className="w-full max-w-95 relative z-10">
           <AnimatePresence mode="wait">
             {!isSuccess ? (
               <motion.div
@@ -323,11 +335,11 @@ export default function SignupPage() {
                       onClick={() => setRole("customer")}
                       className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border transition-all duration-300 overflow-hidden group ${formData.role === "customer"
                           ? "bg-[#5227FF]/10 border-[#5227FF] shadow-[0_0_20px_rgba(82,39,255,0.2)]"
-                          : "bg-white/[0.02] border-white/10 hover:bg-white/[0.05]"
+                            : "bg-white/2 border-white/10 hover:bg-white/5"
                         }`}
                     >
                       {formData.role === "customer" && (
-                        <motion.div layoutId="role-glow" className="absolute inset-0 bg-gradient-to-b from-[#5227FF]/20 to-transparent opacity-50" />
+                        <motion.div layoutId="role-glow" className="absolute inset-0 bg-linear-to-b from-[#5227FF]/20 to-transparent opacity-50" />
                       )}
                       <User className={`w-6 h-6 mb-2 transition-colors ${formData.role === "customer" ? "text-[#00F5FF]" : "text-white/40 group-hover:text-white/60"}`} />
                       <span className={`text-sm font-medium transition-colors ${formData.role === "customer" ? "text-white" : "text-white/40 group-hover:text-white/60"}`}>Customer</span>
@@ -338,11 +350,11 @@ export default function SignupPage() {
                       onClick={() => setRole("technician")}
                       className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border transition-all duration-300 overflow-hidden group ${formData.role === "technician"
                           ? "bg-[#5227FF]/10 border-[#5227FF] shadow-[0_0_20px_rgba(82,39,255,0.2)]"
-                          : "bg-white/[0.02] border-white/10 hover:bg-white/[0.05]"
+                            : "bg-white/2 border-white/10 hover:bg-white/5"
                         }`}
                     >
                       {formData.role === "technician" && (
-                        <motion.div layoutId="role-glow" className="absolute inset-0 bg-gradient-to-b from-[#5227FF]/20 to-transparent opacity-50" />
+                        <motion.div layoutId="role-glow" className="absolute inset-0 bg-linear-to-b from-[#5227FF]/20 to-transparent opacity-50" />
                       )}
                       <Wrench className={`w-6 h-6 mb-2 transition-colors ${formData.role === "technician" ? "text-[#00F5FF]" : "text-white/40 group-hover:text-white/60"}`} />
                       <span className={`text-sm font-medium transition-colors ${formData.role === "technician" ? "text-white" : "text-white/40 group-hover:text-white/60"}`}>Technician</span>
@@ -460,7 +472,7 @@ export default function SignupPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     disabled={isSubmitting}
-                    className="relative w-full py-4 mt-6 rounded-xl bg-gradient-to-r from-[#5227FF] to-[#00F5FF] text-white font-semibold text-sm tracking-wide shadow-[0_0_20px_rgba(82,39,255,0.4)] overflow-hidden group disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="relative w-full py-4 mt-6 rounded-xl bg-linear-to-r from-[#5227FF] to-[#00F5FF] text-white font-semibold text-sm tracking-wide shadow-[0_0_20px_rgba(82,39,255,0.4)] overflow-hidden group disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out" />
                     <span className="relative z-10 flex items-center justify-center gap-2">
@@ -490,7 +502,7 @@ export default function SignupPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="bg-[#0A0D1E]/80 backdrop-blur-2xl border border-[#00FFA3]/30 rounded-3xl p-10 shadow-[0_20px_60px_rgba(0,255,163,0.15)] flex flex-col items-center text-center relative overflow-hidden"
               >
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,255,163,0.1),_transparent)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,163,0.1),transparent)]" />
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -503,7 +515,7 @@ export default function SignupPage() {
                 <p className="text-white/60 text-sm mb-8 relative z-10">
                   Your account has been created successfully. Experience the future of repair services.
                 </p>
-                <Link href="/dashboard" className="relative z-10 w-full py-3.5 rounded-xl bg-white/[0.05] border border-white/10 hover:bg-white/[0.1] hover:border-white/20 transition-all font-medium text-sm text-white flex items-center justify-center gap-2 group">
+                <Link href="/dashboard" className="relative z-10 w-full py-3.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all font-medium text-sm text-white flex items-center justify-center gap-2 group">
                   Go to Dashboard <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </motion.div>

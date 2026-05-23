@@ -1,4 +1,18 @@
-import { Car, CheckCircle2, Clock3, ShieldAlert, Wrench } from "lucide-react"
+import {
+  BadgeDollarSign,
+  Bell,
+  BrainCircuit,
+  ChartColumnBig,
+  ClipboardList,
+  LayoutDashboard,
+  Package,
+  Radar,
+  Route,
+  UserRound,
+  Settings,
+  Star,
+  TriangleAlert,
+} from "lucide-react"
 
 export type TechnicianJob = Record<string, unknown> & {
   id: string | number
@@ -35,20 +49,38 @@ export type TechnicianNotification = Record<string, unknown> & {
   level?: string
 }
 
+type AuthProfile = {
+  full_name?: string | null
+  name?: string | null
+  email?: string | null
+}
+
+type AuthUserLike = {
+  email?: string | null
+  user_metadata?: {
+    full_name?: string | null
+  } | null
+}
+
 export const TECHNICIAN_STAGES = ["Assigned", "On The Way", "Repairing", "Completed"] as const
 
 export const TECHNICIAN_MENU = [
-  { label: "Dashboard", href: "/dashboard/technician", icon: Clock3 },
-  { label: "Active Jobs", href: "/dashboard/technician/jobs", icon: Wrench },
-  { label: "Repair Queue", href: "/dashboard/technician/jobs", icon: Car },
-  { label: "Tracking", href: "/dashboard/technician/tracking", icon: Car },
-  { label: "Earnings", href: "/dashboard/technician/earnings", icon: CheckCircle2 },
-  { label: "Notifications", href: "/dashboard/technician/notifications", icon: ShieldAlert },
-  { label: "Reviews", href: "/dashboard/technician/reviews", icon: CheckCircle2 },
-  { label: "Settings", href: "/dashboard/technician/settings", icon: Wrench },
+  { label: "Dashboard", href: "/dashboard/technician", icon: LayoutDashboard },
+  { label: "Active Jobs", href: "/dashboard/technician/jobs", icon: ClipboardList },
+  { label: "Repair Queue", href: "/dashboard/technician/queue", icon: Route },
+  { label: "Tracking", href: "/dashboard/technician/tracking", icon: Radar },
+  { label: "Analytics", href: "/dashboard/technician/analytics", icon: ChartColumnBig },
+  { label: "Earnings", href: "/dashboard/technician/earnings", icon: BadgeDollarSign },
+  { label: "Reviews", href: "/dashboard/technician/reviews", icon: Star },
+  { label: "Notifications", href: "/dashboard/technician/notifications", icon: Bell },
+  { label: "Emergency Requests", href: "/dashboard/technician/emergency-requests", icon: TriangleAlert },
+  { label: "Inventory", href: "/dashboard/technician/inventory", icon: Package },
+  { label: "Performance AI", href: "/dashboard/technician/performance-ai", icon: BrainCircuit },
+  { label: "Profile", href: "/dashboard/technician/profile", icon: UserRound },
+  { label: "Settings", href: "/dashboard/technician/settings", icon: Settings },
 ] as const
 
-export function getTechnicianDisplayName(profile: any, user: any) {
+export function getTechnicianDisplayName(profile: AuthProfile | null, user: AuthUserLike | null) {
   const fullName = profile?.full_name || user?.user_metadata?.full_name || profile?.name || ""
 
   if (fullName) return fullName

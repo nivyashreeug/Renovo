@@ -3,20 +3,22 @@
 import { motion } from "framer-motion";
 import { MapPin, Building, Map, Hash } from "lucide-react";
 
+type BookingAddressFormData = {
+  address: string;
+  apartment: string;
+  city: string;
+  zipCode: string;
+};
+
 interface AddressFormProps {
-  formData: {
-    address: string;
-    apartment: string;
-    city: string;
-    zipCode: string;
-  };
-  setFormData: (data: any) => void;
+  formData: BookingAddressFormData;
+  setFormData: React.Dispatch<React.SetStateAction<BookingAddressFormData>>;
 }
 
 export function AddressForm({ formData, setFormData }: AddressFormProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev: any) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   return (

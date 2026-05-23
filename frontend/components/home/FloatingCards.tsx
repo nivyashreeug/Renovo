@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
-import { motion, useAnimation, useInView } from "framer-motion";
-import { Smartphone, Snowflake, Car, MonitorSmartphone } from "lucide-react"; // Wait, I need to ensure lucide-react is there, the user's package.json has it.
+import React from "react";
+import { motion } from "framer-motion";
+import { Car, MonitorSmartphone, Smartphone, Snowflake } from "lucide-react";
 
 const cards = [
   {

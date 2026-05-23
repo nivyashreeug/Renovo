@@ -4,6 +4,7 @@ import {
     createContext,
     useContext,
     useEffect,
+    useRef,
     useState,
 } from "react";
 
@@ -19,10 +20,17 @@ import { supabase } from "@/lib/supabase";
 interface AuthContextType {
     user: User | null;
     session: Session | null;
-    profile: any;
+    profile: Profile | null;
     loading: boolean;
     logout: () => Promise<void>;
 }
+
+type Profile = {
+    id: string;
+    full_name?: string | null;
+    email?: string | null;
+    role?: string | null;
+} & Record<string, unknown>;
 
 const AuthContext =
     createContext<AuthContextType | undefined>(
@@ -40,8 +48,34 @@ export function AuthProvider({
     );
 
     const [session, setSession] = useState<Session | null>(null);
-    const [profile, setProfile] = useState<any>(null);
+    const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
+    const initializedRef = useRef(false);
+
+    const applySession = async (
+        nextSession: Session | null,
+        options?: { skipProfileFetch?: boolean }
+    ) => {
+        setSession(nextSession);
+        setUser(nextSession?.user ?? null);
+
+        if (nextSession?.user) {
+            if (options?.skipProfileFetch) {
+                return;
+            }
+
+            const { data: profileData } = await supabase
+                .from("profiles")
+                .select("*")
+                .eq("id", nextSession.user.id)
+                .maybeSingle();
+
+            setProfile((profileData as Profile | null) ?? null);
+            return;
+        }
+
+        setProfile(null);
+    };
 
     // LOGOUT FUNCTION
     const logout = async () => {
@@ -50,27 +84,19 @@ export function AuthProvider({
     };
 
     useEffect(() => {
-        const fetchProfile = async (userId: string) => {
-            const { data: profileData } = await supabase
-                .from("profiles")
-                .select("*")
-                .eq("id", userId)
-                .single();
-            setProfile(profileData);
-        };
-
         // GET CURRENT SESSION
         const getSession = async () => {
-            const {
-                data: { session },
-            } = await supabase.auth.getSession();
+            try {
+                setLoading(true);
+                const {
+                    data: { session },
+                } = await supabase.auth.getSession();
 
-            setSession(session);
-            setUser(session?.user ?? null);
-            if (session?.user) {
-                await fetchProfile(session.user.id);
+                await applySession(session);
+            } finally {
+                initializedRef.current = true;
+                setLoading(false);
             }
-            setLoading(false);
         };
 
         getSession();
@@ -79,15 +105,23 @@ export function AuthProvider({
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange(
-            async (_event, session) => {
-                setSession(session);
-                setUser(session?.user ?? null);
-                if (session?.user) {
-                    await fetchProfile(session.user.id);
-                } else {
-                    setProfile(null);
+            async (event, session) => {
+                const skipProfileFetch = event === "TOKEN_REFRESHED";
+
+                try {
+                    if (!initializedRef.current) {
+                        setLoading(true);
+                    }
+
+                    await applySession(session, {
+                        skipProfileFetch,
+                    });
+                } finally {
+                    if (!initializedRef.current) {
+                        initializedRef.current = true;
+                        setLoading(false);
+                    }
                 }
-                setLoading(false);
             }
         );
 

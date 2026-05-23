@@ -138,6 +138,6 @@
     display: none;
   }
   .font-space-grotesk {
-    font-family: var(--font-space-grotesk), sans-serif;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   }
 }

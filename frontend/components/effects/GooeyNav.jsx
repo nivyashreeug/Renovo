@@ -4,6 +4,11 @@ import { useRef, useEffect, useState } from "react";
 import Link from "next/link";
 import "./GooeyNav.css";
 
+const seededRandom = (seed) => {
+  const value = Math.sin(seed * 12.9898) * 43758.5453;
+  return value - Math.floor(value);
+};
+
 const GooeyNav = ({
   items,
   animationTime = 600,
@@ -21,14 +26,13 @@ const GooeyNav = ({
   const textRef = useRef(null);
 
   const [activeIndex, setActiveIndex] = useState(initialActiveIndex);
+  const resolvedActiveIndex = currentActiveIndex ?? activeIndex;
 
-  // Noise helper
-  const noise = (n = 1) => n / 2 - Math.random() * n;
+  const noise = (seed, range = 1) => range / 2 - seededRandom(seed) * range;
 
-  // Get particle positions
-  const getXY = (distance, pointIndex, totalPoints) => {
+  const getXY = (distance, pointIndex, totalPoints, seed) => {
     const angle =
-      ((360 + noise(8)) / totalPoints) *
+      ((360 + noise(seed, 8)) / totalPoints) *
       pointIndex *
       (Math.PI / 180);
 
@@ -38,31 +42,30 @@ const GooeyNav = ({
     ];
   };
 
-  // Create particle config
   const createParticle = (i, t, d, r) => {
-    let rotate = noise(r / 10);
+    const seed = (resolvedActiveIndex + 1) * 100 + i;
+    const rotate = noise(seed + 1, r / 10);
 
     return {
       start: getXY(
         d[0],
         particleCount - i,
-        particleCount
+        particleCount,
+        seed + 2
       ),
 
       end: getXY(
-        d[1] + noise(7),
+        d[1] + noise(seed + 3, 7),
         particleCount - i,
-        particleCount
+        particleCount,
+        seed + 4
       ),
 
       time: t,
 
-      scale: 1 + noise(0.2),
+      scale: 1 + noise(seed + 5, 0.2),
 
-      color:
-        colors[
-        Math.floor(Math.random() * colors.length)
-        ],
+      color: colors[Math.floor(seededRandom(seed + 6) * colors.length)],
 
       rotate:
         rotate > 0
@@ -71,7 +74,6 @@ const GooeyNav = ({
     };
   };
 
-  // Update gooey effect position
   const updateEffectPosition = (element) => {
     if (
       !containerRef.current ||
@@ -98,7 +100,6 @@ const GooeyNav = ({
     textRef.current.innerText = element.innerText;
   };
 
-  // Create particles
   const makeParticles = (element) => {
     const d = particleDistances;
     const r = particleR;
@@ -114,7 +115,7 @@ const GooeyNav = ({
     for (let i = 0; i < particleCount; i++) {
       const t =
         animationTime * 2 +
-        noise(timeVariance * 2);
+        noise((resolvedActiveIndex + 1) * 1000 + i, timeVariance * 2);
 
       const p = createParticle(i, t, d, r);
 
@@ -186,13 +187,12 @@ const GooeyNav = ({
     }
   };
 
-  // Handle click
   const handleClick = (e, index) => {
     const liEl = e.currentTarget.closest("li");
 
     if (!liEl) return;
 
-    if (activeIndex === index) return;
+    if (resolvedActiveIndex === index) return;
 
     setActiveIndex(index);
 
@@ -224,7 +224,6 @@ const GooeyNav = ({
     }
   };
 
-  // Keyboard accessibility
   const handleKeyDown = (e, index) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -232,18 +231,9 @@ const GooeyNav = ({
     }
   };
 
-  // External active index sync
   useEffect(() => {
-    if (
-      currentActiveIndex !== undefined &&
-      currentActiveIndex !== activeIndex
-    ) {
-      setActiveIndex(currentActiveIndex);
-
-      const liEl =
-        navRef.current?.querySelectorAll("li")[
-        currentActiveIndex
-        ];
+    if (currentActiveIndex !== undefined) {
+      const liEl = navRef.current?.querySelectorAll("li")[currentActiveIndex];
 
       if (liEl) {
         updateEffectPosition(liEl);
@@ -255,7 +245,6 @@ const GooeyNav = ({
     }
   }, [currentActiveIndex]);
 
-  // Initial effect positioning
   useEffect(() => {
     if (
       !navRef.current ||
@@ -265,7 +254,7 @@ const GooeyNav = ({
 
     const activeLi =
       navRef.current.querySelectorAll("li")[
-      activeIndex
+      resolvedActiveIndex
       ];
 
     if (activeLi) {
@@ -281,7 +270,7 @@ const GooeyNav = ({
         const currentActiveLi =
           navRef.current?.querySelectorAll(
             "li"
-          )[activeIndex];
+          )[resolvedActiveIndex];
 
         if (currentActiveLi) {
           updateEffectPosition(currentActiveLi);
@@ -291,7 +280,7 @@ const GooeyNav = ({
     resizeObserver.observe(containerRef.current);
 
     return () => resizeObserver.disconnect();
-  }, [activeIndex]);
+  }, [resolvedActiveIndex]);
 
   return (
     <div
@@ -304,12 +293,12 @@ const GooeyNav = ({
             <li
               key={index}
               className={
-                activeIndex === index
+                resolvedActiveIndex === index
                   ? "active"
                   : ""
               }
             >
-              <a
+              <Link
                 href={item.href}
                 onClick={(e) =>
                   handleClick(e, index)
@@ -319,7 +308,7 @@ const GooeyNav = ({
                 }
               >
                 {item.label}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>

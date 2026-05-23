@@ -2,25 +2,30 @@
 
 import React, { useEffect, useState } from "react"
 import { motion, type Variants } from "framer-motion"
-import { Star, MessageCircle, ThumbsUp, Calendar } from "lucide-react"
+import { Calendar, MessageCircle, Star, ThumbsUp } from "lucide-react"
+
 import { supabase } from "@/lib/supabase"
-import { formatRelativeTime } from "@/components/technician/technician-utils"
+import { useAuth } from "@/providers/AuthProvider"
+import { formatRelativeTime, getTechnicianDisplayName } from "@/components/technician/technician-utils"
 
 type Review = {
   id: string | number
-  customer_name?: string
-  rating?: number
-  comment?: string
-  service_type?: string
-  created_at?: string
-  booking_id?: string
+  customer_name?: string | null
+  rating?: number | null
+  comment?: string | null
+  review?: string | null
+  service_name?: string | null
+  technician_name?: string | null
+  created_at?: string | null
+  booking_id?: string | number | null
 }
 
 export default function TechnicianReviewsPage() {
+  const { user, profile } = useAuth()
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
-    average: 4.9,
+    average: 0,
     total: 0,
     fiveStar: 0,
     fourStar: 0,
@@ -34,68 +39,59 @@ export default function TechnicianReviewsPage() {
 
     async function loadReviews() {
       try {
-        // Fetch bookings with completion status (these represent reviews)
+        const displayName = getTechnicianDisplayName(profile, user).trim().toLowerCase()
         const res = await supabase
-          .from("bookings")
-          .select("id,customer_name,service_type,created_at,status,booking_id")
-          .eq("status", "Completed")
+          .from("reviews")
+          .select("id,customer_name,rating,comment,service_name,technician_name,created_at,booking_id")
           .order("created_at", { ascending: false })
           .limit(100)
 
-        const rows = (res.data ?? []) as Review[]
+        const rows = ((res.data ?? []) as Review[]).filter((review) => {
+          if (!displayName || displayName === "technician") return true
+          return String(review.technician_name || "").trim().toLowerCase() === displayName
+        })
+
         if (!mounted) return
 
-        // Mock ratings for now (in a real app, these would be actual review ratings)
-        const reviewsWithRatings = rows.map((r, idx) => ({
-          ...r,
-          rating: Math.floor(Math.random() * 2) + 4,
-          comment: [
-            "Excellent technician! Very professional and quick service.",
-            "Great experience. Highly recommend!",
-            "Fixed the issue perfectly. Very satisfied.",
-            "Fast and efficient. Great work!",
-            "Professional service and fair pricing.",
-          ][idx % 5],
-        }))
+        setReviews(rows)
 
-        setReviews(reviewsWithRatings)
-
-        // Calculate stats
-        const avgRating =
-          reviewsWithRatings.length > 0
-            ? reviewsWithRatings.reduce((sum, r) => sum + (r.rating || 0), 0) / reviewsWithRatings.length
-            : 4.9
+        const average =
+          rows.length > 0
+            ? rows.reduce((sum, review) => sum + Number(review.rating || 0), 0) / rows.length
+            : 0
 
         const distribution = {
-          5: reviewsWithRatings.filter((r) => r.rating === 5).length,
-          4: reviewsWithRatings.filter((r) => r.rating === 4).length,
-          3: reviewsWithRatings.filter((r) => r.rating === 3).length,
-          2: reviewsWithRatings.filter((r) => r.rating === 2).length,
-          1: reviewsWithRatings.filter((r) => r.rating === 1).length,
+          5: rows.filter((review) => review.rating === 5).length,
+          4: rows.filter((review) => review.rating === 4).length,
+          3: rows.filter((review) => review.rating === 3).length,
+          2: rows.filter((review) => review.rating === 2).length,
+          1: rows.filter((review) => review.rating === 1).length,
         }
 
         setStats({
-          average: Math.round(avgRating * 10) / 10,
-          total: reviewsWithRatings.length,
+          average: Math.round(average * 10) / 10,
+          total: rows.length,
           fiveStar: distribution[5],
           fourStar: distribution[4],
           threeStar: distribution[3],
           twoStar: distribution[2],
           oneStar: distribution[1],
         })
-
-        setLoading(false)
       } catch (err) {
         console.error("Failed to load reviews:", err)
-        setLoading(false)
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
       }
     }
 
-    loadReviews()
+    void loadReviews()
+
     return () => {
       mounted = false
     }
-  }, [])
+  }, [profile, user])
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -114,12 +110,11 @@ export default function TechnicianReviewsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {[
           {
             label: "Average Rating",
-            value: stats.average,
+            value: stats.total > 0 ? stats.average.toFixed(1) : "—",
             icon: Star,
             color: "from-[#FFB020] to-[#FF4D6D]",
           },
@@ -162,7 +157,7 @@ export default function TechnicianReviewsPage() {
                   <div className="text-xs uppercase tracking-[0.2em] text-white/40">{stat.label}</div>
                   <div className="mt-2 text-2xl font-bold text-white">{stat.value}</div>
                 </div>
-                <div className={`rounded-xl bg-gradient-to-br ${stat.color} p-3 text-white`}>
+                <div className={`rounded-xl bg-linear-to-br ${stat.color} p-3 text-white`}>
                   <Icon size={24} />
                 </div>
               </div>
@@ -171,14 +166,13 @@ export default function TechnicianReviewsPage() {
         })}
       </div>
 
-      {/* Rating Distribution */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
         className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl"
       >
-        <h3 className="text-lg font-semibold text-white mb-4">Rating Breakdown</h3>
+        <h3 className="mb-4 text-lg font-semibold text-white">Rating Breakdown</h3>
         <div className="space-y-4">
           {[
             { stars: 5, count: stats.fiveStar, label: "Excellent" },
@@ -188,33 +182,28 @@ export default function TechnicianReviewsPage() {
             { stars: 1, count: stats.oneStar, label: "Needs Improvement" },
           ].map((item, idx) => (
             <div key={item.stars}>
-              <div className="flex items-center justify-between mb-2">
+              <div className="mb-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-white">{item.stars}</span>
                   <div className="flex gap-0.5">
-                    {[...Array(5)].map((_, i) => (
+                    {[...Array(5)].map((_, starIndex) => (
                       <Star
-                        key={i}
+                        key={starIndex}
                         size={14}
-                        className={i < item.stars ? "fill-[#FFB020] text-[#FFB020]" : "text-white/20"}
+                        className={starIndex < item.stars ? "fill-[#FFB020] text-[#FFB020]" : "text-white/20"}
                       />
                     ))}
                   </div>
-                  <span className="text-xs text-white/55 ml-2">{item.label}</span>
+                  <span className="ml-2 text-xs text-white/55">{item.label}</span>
                 </div>
                 <span className="text-sm font-semibold text-white">{item.count} reviews</span>
               </div>
-              <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+              <div className="h-2 overflow-hidden rounded-full bg-white/10">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{
-                    width:
-                      stats.total > 0
-                        ? `${(item.count / stats.total) * 100}%`
-                        : "0%",
-                  }}
+                  animate={{ width: stats.total > 0 ? `${(item.count / stats.total) * 100}%` : "0%" }}
                   transition={{ duration: 1, ease: "easeOut", delay: 0.3 + idx * 0.05 }}
-                  className="h-full bg-gradient-to-r from-[#FFB020] to-[#FF4D6D]"
+                  className="h-full bg-linear-to-r from-[#FFB020] to-[#FF4D6D]"
                 />
               </div>
             </div>
@@ -222,57 +211,47 @@ export default function TechnicianReviewsPage() {
         </div>
       </motion.div>
 
-      {/* Reviews List */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="space-y-4"
-      >
+      <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4">
         <h3 className="text-lg font-semibold text-white">Recent Reviews</h3>
         {loading ? (
           <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-8 text-center text-white/55">
             Loading reviews...
           </div>
         ) : reviews.length > 0 ? (
-          reviews.map((review, idx) => (
+          reviews.map((review) => (
             <motion.div
               key={review.id}
               variants={itemVariants}
               className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl hover:border-white/20 transition"
             >
               <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-[#5227FF] to-[#00F5FF] flex items-center justify-center text-white font-bold">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-[#5227FF] to-[#00F5FF] font-bold text-white">
                   {String(review.customer_name || "C").charAt(0).toUpperCase()}
                 </div>
 
                 <div className="flex-1">
-                  <div className="flex items-start justify-between gap-4 mb-2">
+                  <div className="mb-2 flex items-start justify-between gap-4">
                     <div>
                       <h4 className="font-semibold text-white">{String(review.customer_name || "Customer")}</h4>
-                      <p className="text-xs text-white/55">{String(review.service_type || "Service")}</p>
+                      <p className="text-xs text-white/55">{String(review.service_name || "Service")}</p>
                     </div>
                     <div className="flex items-center gap-1">
-                      {[...Array(5)].map((_, i) => (
+                      {[...Array(5)].map((_, starIndex) => (
                         <Star
-                          key={i}
+                          key={starIndex}
                           size={16}
-                          className={
-                            i < (review.rating || 0)
-                              ? "fill-[#FFB020] text-[#FFB020]"
-                              : "text-white/20"
-                          }
+                          className={starIndex < Number(review.rating || 0) ? "fill-[#FFB020] text-[#FFB020]" : "text-white/20"}
                         />
                       ))}
                     </div>
                   </div>
 
-                  <p className="text-sm text-white/75 mb-3">{review.comment}</p>
+                  <p className="mb-3 text-sm text-white/75">
+                    {review.comment || review.review || "Customer left a rating without a written note."}
+                  </p>
 
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-white/45">
-                      {formatRelativeTime(String(review.created_at))}
-                    </span>
+                    <span className="text-xs text-white/45">{formatRelativeTime(String(review.created_at))}</span>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -288,8 +267,8 @@ export default function TechnicianReviewsPage() {
           ))
         ) : (
           <div className="rounded-[1.75rem] border border-dashed border-white/10 bg-white/5 p-8 text-center text-white/55">
-            <MessageCircle className="w-8 h-8 mx-auto mb-3 text-white/30" />
-            No reviews yet. Complete repairs to receive customer feedback.
+            <MessageCircle className="mx-auto mb-3 h-8 w-8 text-white/30" />
+            No reviews yet. Completed repairs with customer feedback will appear here automatically.
           </div>
         )}
       </motion.div>

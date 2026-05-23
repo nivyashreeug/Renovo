@@ -1,9 +1,9 @@
+import TrackingPanel from '@/components/tracking/TrackingPanel'
+
 export default function TrackingPage() {
     return (
-        <main className="min-h-screen bg-black text-white flex items-center justify-center">
-            <h1 className="text-5xl font-bold">
-                Tracking Page
-            </h1>
+        <main className="min-h-screen bg-[#050816] text-white p-6 md:p-10">
+            <TrackingPanel />
         </main>
-    );
+    )
 }

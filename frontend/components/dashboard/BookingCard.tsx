@@ -24,9 +24,14 @@ export default function BookingCard({ type, device, date, time, status, price, d
 
     const statusStyles: Record<string, string> = {
         Upcoming: "bg-[#00F5FF]/10 text-[#00F5FF] border-[#00F5FF]/30",
+        Pending: "bg-[#FFB020]/10 text-[#FFB020] border-[#FFB020]/35 shadow-[0_0_24px_rgba(255,176,32,0.18)]",
+        Assigned: "bg-[#00F5FF]/10 text-[#00F5FF] border-[#00F5FF]/35 shadow-[0_0_24px_rgba(0,245,255,0.18)]",
+        "On The Way": "bg-[#38BDF8]/10 text-[#7DD3FC] border-[#38BDF8]/35 shadow-[0_0_24px_rgba(56,189,248,0.18)]",
+        Repairing: "bg-[#5227FF]/10 text-[#B8B2FF] border-[#5227FF]/35 shadow-[0_0_24px_rgba(82,39,255,0.2)]",
         Completed: "bg-[#00FFA3]/10 text-[#00FFA3] border-[#00FFA3]/30",
         Emergency: "bg-[#FF4D6D]/10 text-[#FF4D6D] border-[#FF4D6D]/30",
         Cancelled: "bg-white/10 text-white/60 border-white/20",
+        Rejected: "bg-[#FF4D6D]/10 text-[#FF4D6D] border-[#FF4D6D]/35 shadow-[0_0_24px_rgba(255,77,109,0.18)]",
         Refunded: "bg-[#00FFA3]/10 text-[#00FFA3] border-[#00FFA3]/30",
         Rescheduled: "bg-[#5227FF]/10 text-[#A78BFA] border-[#5227FF]/30",
         "Refund Initiated": "bg-[#FFB020]/10 text-[#FFB020] border-[#FFB020]/30",
@@ -39,7 +44,8 @@ export default function BookingCard({ type, device, date, time, status, price, d
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay }}
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ scale: 1.02, rotateX: -2, rotateY: 2 }}
+            layout
             className="group relative p-6 rounded-2xl bg-white/5 border border-white/10 overflow-hidden cursor-pointer backdrop-blur-sm"
         >
             <div className={`absolute left-0 top-0 w-1 h-full ${
@@ -61,12 +67,12 @@ export default function BookingCard({ type, device, date, time, status, price, d
                         <p className="text-sm text-white/50">{device}</p>
                     </div>
                 </div>
-                <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase border ${
+                <motion.div layout className={`px-3 py-1 rounded-full text-xs font-bold uppercase border ${
                     isEmergency ? statusStyles.Emergency :
                     statusStyles[displayedStatus] || statusStyles.Upcoming
                 }`}>
                     {displayedStatus}
-                </div>
+                </motion.div>
             </div>
 
             {isRefunded && (

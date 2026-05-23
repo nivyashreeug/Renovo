@@ -1,12 +1,12 @@
-import Navbar from "@/components/Navbar";
-import Hero from "@/components/Hero";
-import ServicesSection from "@/components/ServicesSection";
-import ServicesMegaMenu from "@/components/ServicesMegaMenu";
-import TechnicianSection from "@/components/TechnicianSection";
-import HowItWorksSection from "@/components/HowItWorksSection";
-import LiveTrackingSection from "@/components/LiveTrackingSection";
-import ReviewsSection from "@/components/ReviewsSection";
-import ContactSection from "@/components/ContactSection";
+import ContactSection from "@/components/home/ContactSection";
+import Hero from "@/components/home/Hero";
+import HowItWorksSection from "@/components/home/HowItWorksSection";
+import LiveTrackingSection from "@/components/home/LiveTrackingSection";
+import Navbar from "@/components/home/Navbar";
+import ReviewsSection from "@/components/home/ReviewsSection";
+import ServicesMegaMenu from "@/components/home/ServicesMegaMenu";
+import ServicesSection from "@/components/home/ServicesSection";
+import TechnicianSection from "@/components/home/TechnicianSection";
 
 export default function Home() {
   return (

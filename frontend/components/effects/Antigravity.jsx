@@ -2,6 +2,11 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 
+const seededRandom = (seed) => {
+  const value = Math.sin(seed * 12.9898) * 43758.5453;
+  return value - Math.floor(value);
+};
+
 const AntigravityInner = ({
   count = 300,
   magnetRadius = 10,
@@ -33,18 +38,19 @@ const AntigravityInner = ({
     const height = viewport.height || 100;
 
     for (let i = 0; i < count; i++) {
-      const t = Math.random() * 100;
-      const factor = 20 + Math.random() * 100;
-      const speed = 0.01 + Math.random() / 200;
-      const xFactor = -50 + Math.random() * 100;
-      const yFactor = -50 + Math.random() * 100;
-      const zFactor = -50 + Math.random() * 100;
+      const baseSeed = i + count * 13 + width * 7 + height * 11;
+      const t = seededRandom(baseSeed + 1) * 100;
+      const factor = 20 + seededRandom(baseSeed + 2) * 100;
+      const speed = 0.01 + seededRandom(baseSeed + 3) / 200;
+      const xFactor = -50 + seededRandom(baseSeed + 4) * 100;
+      const yFactor = -50 + seededRandom(baseSeed + 5) * 100;
+      const zFactor = -50 + seededRandom(baseSeed + 6) * 100;
 
-      const x = (Math.random() - 0.5) * width;
-      const y = (Math.random() - 0.5) * height;
-      const z = (Math.random() - 0.5) * 20;
+      const x = (seededRandom(baseSeed + 7) - 0.5) * width;
+      const y = (seededRandom(baseSeed + 8) - 0.5) * height;
+      const z = (seededRandom(baseSeed + 9) - 0.5) * 20;
 
-      const randomRadiusOffset = (Math.random() - 0.5) * 2;
+      const randomRadiusOffset = (seededRandom(baseSeed + 10) - 0.5) * 2;
 
       temp.push({
         t,

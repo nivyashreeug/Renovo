@@ -10,7 +10,7 @@ import StatusUpdater from "@/components/technician/StatusUpdater"
 import ReviewsPanel from "@/components/technician/ReviewsPanel"
 import AvailabilityToggle from "@/components/technician/AvailabilityToggle"
 import { TechnicianJob } from "@/components/technician/technician-utils"
-import { TrendingUp, Target, Clock, Star, Zap } from "lucide-react"
+import { Target, Clock, Star, Zap } from "lucide-react"
 
 export default function TechnicianPage() {
   const [selected, setSelected] = useState<TechnicianJob | null>(null)
@@ -138,7 +138,7 @@ export default function TechnicianPage() {
 
         {/* Job Queue */}
         <motion.div variants={itemVariants}>
-          <JobQueue onSelect={(job) => setSelected(job)} onCountsChange={setMetrics} />
+          <JobQueue mode="pending" onSelect={(job) => setSelected(job)} onCountsChange={setMetrics} />
         </motion.div>
       </motion.div>
 

@@ -2,9 +2,9 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import Antigravity from "@/components/Antigravity";
-import TextPressure from "@/components/TextPressure";
-import TextType from "@/components/TextType";
+import Antigravity from "@/components/effects/Antigravity";
+import TextPressure from "@/components/effects/TextPressure";
+import TextType from "@/components/effects/TextType";
 import FloatingCards from "./FloatingCards";
 
 export default function Hero() {

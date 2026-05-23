@@ -1,10 +1,20 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useMemo, useCallback, memo } from "react"
 import { motion } from "framer-motion"
-import { MapPin, Navigation2, Clock, Phone, MessageSquare, AlertCircle, CheckCircle2 } from "lucide-react"
+import { MapPin, Navigation2, Phone, MessageSquare, AlertCircle, CheckCircle2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { TechnicianJob, statusTone, formatRelativeTime } from "@/components/technician/technician-utils"
+import { TechnicianJob, statusTone } from "@/components/technician/technician-utils"
+
+const trackingParticlePositions = Array.from({ length: 3 }, (_, i) => {
+  const base = i + 1
+  return {
+    initialX: (base * 47) % 300,
+    initialY: (base * 83) % 300,
+    animateX: [((base + 2) * 61) % 300, ((base + 5) * 97) % 300],
+    animateY: [((base + 3) * 53) % 300, ((base + 7) * 89) % 300],
+  }
+})
 
 export default function TechnicianTrackingPage() {
   const [jobs, setJobs] = useState<TechnicianJob[]>([])
@@ -53,8 +63,6 @@ export default function TechnicianTrackingPage() {
     }
   }, [])
 
-  const tone = statusTone(String(selected?.status || "Assigned"))
-
   return (
     <div className="grid gap-6 lg:grid-cols-[1.5fr_0.85fr]">
       {/* Main Tracking Map */}
@@ -77,9 +85,9 @@ export default function TechnicianTrackingPage() {
         {loading ? (
           <div className="h-[500px] rounded-[1.5rem] border border-white/10 bg-[#050816]/40 flex items-center justify-center">
             <div className="text-white/55 text-center">
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
-                <Navigation2 className="w-8 h-8 mx-auto mb-3 text-[#00F5FF]" />
-              </motion.div>
+              <div className="w-8 h-8 mx-auto mb-3 text-[#00F5FF] animate-spin">
+                <Navigation2 className="w-8 h-8 text-[#00F5FF]" />
+              </div>
               Loading live tracking...
             </div>
           </div>
@@ -98,13 +106,13 @@ export default function TechnicianTrackingPage() {
               />
 
               {/* Animated Particles */}
-              {[...Array(6)].map((_, i) => (
+              {trackingParticlePositions.map((particle, i) => (
                 <motion.div
                   key={i}
-                  initial={{ x: Math.random() * 300, y: Math.random() * 300, opacity: 0 }}
+                  initial={{ x: particle.initialX, y: particle.initialY, opacity: 0 }}
                   animate={{
-                    x: [Math.random() * 300, Math.random() * 300],
-                    y: [Math.random() * 300, Math.random() * 300],
+                    x: particle.animateX,
+                    y: particle.animateY,
                     opacity: [0.3, 0.8, 0.3],
                   }}
                   transition={{ duration: 8 + i * 2, repeat: Infinity }}

@@ -1,23 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import GooeyNav from "@/components/GooeyNav";
-import Logo from "@/components/Logo";
+import { motion } from "framer-motion";
+import GooeyNav from "@/components/effects/GooeyNav";
+import Logo from "@/components/shared/Logo";
+
+const navItems = [
+  { label: "Home", href: "/", sectionId: "home" },
+  { label: "Services", href: "/services", sectionId: "services" },
+  { label: "Technicians", href: "/technicians", sectionId: "technicians" },
+  { label: "Reviews", href: "/reviews", sectionId: "reviews" },
+  { label: "Contacts", href: "/contacts", sectionId: "contacts" },
+];
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
 
   const [activeIndex, setActiveIndex] = useState(0);
-
-  const navItems = [
-    { label: "Home", href: "/", sectionId: "home" },
-    { label: "Services", href: "/services", sectionId: "services" },
-    { label: "Technicians", href: "/technicians", sectionId: "technicians" },
-    { label: "Reviews", href: "/reviews", sectionId: "reviews" },
-    { label: "Contacts", href: "/contacts", sectionId: "contacts" },
-  ];
 
   useEffect(() => {
     const handleScroll = () => {
@@ -90,9 +90,9 @@ export default function Navbar() {
 
       <div className="w-full px-8 md:px-16 flex items-center justify-between relative">
         {/* LEFT: Logo */}
-        <a href="/" className="z-50">
+        <Link href="/" className="z-50">
           <Logo />
-        </a>
+        </Link>
 
         {/* CENTER: GooeyNav */}
         <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2">
@@ -113,7 +113,7 @@ export default function Navbar() {
 
         {/* RIGHT: Buttons */}
         <div className="hidden lg:flex items-center gap-8 z-50 ml-auto">
-          <a
+          <Link
             href="/login"
             className="relative group px-5 py-2 rounded-full border border-[#5227FF]/50 text-white font-medium text-sm overflow-hidden"
           >
@@ -121,8 +121,8 @@ export default function Navbar() {
             <span className="relative z-10 group-hover:text-[#00F5FF] transition-colors duration-300">
               Login
             </span>
-          </a>
-          <a
+          </Link>
+          <Link
             href="/signup"
             className="relative group px-5 py-2 rounded-full border border-[#5227FF]/50 text-white font-medium text-sm overflow-hidden"
           >
@@ -130,7 +130,7 @@ export default function Navbar() {
             <span className="relative z-10 group-hover:text-[#00F5FF] transition-colors duration-300">
               Sign Up
             </span>
-          </a>
+          </Link>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

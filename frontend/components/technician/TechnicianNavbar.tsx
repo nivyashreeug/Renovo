@@ -1,15 +1,16 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from "react"
-import { Bell, Clock3, LogOut, Radio, Sparkles } from "lucide-react"
+import { Bell, Clock3, LogOut, Menu, Radio, Sparkles } from "lucide-react"
 import { useAuth } from "@/providers/AuthProvider"
 import { getTechnicianDisplayName } from "./technician-utils"
 
 type TechnicianNavbarProps = {
   activeJobsCount?: number
+  onMenuOpen?: () => void
 }
 
-export default function TechnicianNavbar({ activeJobsCount = 0 }: TechnicianNavbarProps) {
+export default function TechnicianNavbar({ activeJobsCount = 0, onMenuOpen }: TechnicianNavbarProps) {
   const [time, setTime] = useState("")
   const { user, profile, logout } = useAuth()
 
@@ -26,6 +27,14 @@ export default function TechnicianNavbar({ activeJobsCount = 0 }: TechnicianNavb
     <header className="sticky top-0 z-30 mb-6 rounded-[1.75rem] border border-white/10 bg-white/5 px-5 py-4 backdrop-blur-2xl shadow-[0_0_50px_rgba(82,39,255,0.08)]">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={onMenuOpen}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white/70 transition hover:border-[#00F5FF]/30 hover:text-white lg:hidden"
+            aria-label="Open technician navigation"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-[#5227FF] to-[#00F5FF] font-black text-[#050816] shadow-[0_0_25px_rgba(0,245,255,0.2)]">
             RN
           </div>

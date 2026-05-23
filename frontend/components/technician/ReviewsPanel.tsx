@@ -11,6 +11,18 @@ export default function ReviewsPanel() {
 
   useEffect(() => {
     let mounted = true
+    const channel = supabase
+      .channel("dashboard-reviews")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "reviews" },
+        (payload) => {
+          const newReview = payload.new as Review
+          setReviews((current) => [newReview, ...current].slice(0, 10))
+        }
+      )
+      .subscribe()
+
     async function load() {
       const res = await supabase.from("reviews").select("*").order("created_at", { ascending: false }).limit(10)
       const rows = (res.data ?? []) as Review[]
@@ -18,7 +30,10 @@ export default function ReviewsPanel() {
       setReviews(rows)
     }
     load()
-    return ()=> { mounted=false }
+    return ()=> {
+      mounted=false
+      void supabase.removeChannel(channel)
+    }
   }, [])
 
   return (
@@ -30,7 +45,7 @@ export default function ReviewsPanel() {
         </div>
         <div className="flex items-center gap-1 text-[#00FFA3]"><Star className="h-4 w-4 fill-current" /> 4.9</div>
       </div>
-      <div className="mt-4 space-y-3 max-h-[24rem] overflow-y-auto pr-1">
+      <div className="mt-4 space-y-3 max-h-96 overflow-y-auto pr-1">
         {reviews.map(r => (
           <motion.div key={String(r.id)} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-white/10 bg-[#050816]/70 p-4">
             <div className="flex items-center justify-between gap-3">

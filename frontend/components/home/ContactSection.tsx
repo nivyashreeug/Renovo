@@ -1,9 +1,31 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
-import { Send, Cpu, Smartphone, Wrench, ShieldCheck, Zap, MessageSquare } from "lucide-react";
+import { motion } from "framer-motion";
+import { Send, Cpu, Smartphone, Wrench, Zap, MessageSquare } from "lucide-react";
 import gsap from "gsap";
+
+const PARTICLE_COUNT = 20;
+
+const createSeededRandom = (seed: number) => {
+  let value = seed;
+
+  return () => {
+    value += 0x6D2B79F5;
+    let result = Math.imul(value ^ (value >>> 15), value | 1);
+    result ^= result + Math.imul(result ^ (result >>> 7), result | 61);
+    return ((result ^ (result >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+const PARTICLE_STYLES = Array.from({ length: PARTICLE_COUNT }, (_, index) => {
+  const random = createSeededRandom(1337 + index);
+
+  return {
+    left: `${random() * 100}%`,
+    opacity: random(),
+  };
+});
 
 const ContactForm = () => {
   return (
@@ -207,11 +229,11 @@ const HolographicVisual = () => {
       </div>
 
       {/* Particles */}
-      {[...Array(20)].map((_, i) => (
+      {PARTICLE_STYLES.map((style, i) => (
         <div
           key={i}
           className="particle absolute bottom-0 w-1 h-1 bg-[#00F5FF] rounded-full blur-[1px]"
-          style={{ left: `${Math.random() * 100}%`, opacity: Math.random() }}
+          style={style}
         />
       ))}
 
@@ -269,7 +291,7 @@ export default function ContactSection() {
             transition={{ delay: 0.1 }}
             className="text-5xl md:text-7xl font-bold text-white mb-6 tracking-tight max-w-3xl"
           >
-            Let's Build Better <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#5227FF] via-[#00F5FF] to-[#8B5CF6]">Repair Experiences</span>
+            Let&apos;s Build Better <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#5227FF] via-[#00F5FF] to-[#8B5CF6]">Repair Experiences</span>
           </motion.h2>
 
           <motion.p

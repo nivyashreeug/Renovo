@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { IndianRupee, ArrowUpRight, CreditCard } from "lucide-react";
-import { ResponsiveContainer, AreaChart, Area, Tooltip } from "recharts";
+import { AreaChart, Area, Tooltip } from "recharts";
 
 type BookingRecord = {
     booking_date: string;
     price: number | string;
     status: string;
+    payment_status?: string;
     service_name?: string;
 };
 
@@ -16,10 +17,31 @@ interface PaymentOverviewProps {
 }
 
 export default function PaymentOverview({ bookings = [] }: PaymentOverviewProps) {
-    const [mounted, setMounted] = useState(false);
+    const chartRef = useRef<HTMLDivElement | null>(null);
+    const [chartWidth, setChartWidth] = useState(0);
 
     useEffect(() => {
-        setMounted(true);
+        const node = chartRef.current;
+
+        if (!node || typeof ResizeObserver === "undefined") {
+            return;
+        }
+
+        const updateWidth = () => {
+            setChartWidth(Math.floor(node.getBoundingClientRect().width));
+        };
+
+        updateWidth();
+
+        const observer = new ResizeObserver(() => {
+            updateWidth();
+        });
+
+        observer.observe(node);
+
+        return () => {
+            observer.disconnect();
+        };
     }, []);
 
     const data = useMemo(() => {
@@ -45,12 +67,12 @@ export default function PaymentOverview({ bookings = [] }: PaymentOverviewProps)
     }, [bookings]);
 
     const totalSpent = useMemo(
-        () => bookings.filter((booking) => booking.status === "Paid" || booking.status === "Completed").reduce((sum, booking) => sum + Number(booking.price || 0), 0),
+        () => bookings.filter((booking) => booking.payment_status === "Paid" || booking.status === "Paid" || booking.status === "Completed").reduce((sum, booking) => sum + Number(booking.price || 0), 0),
         [bookings],
     );
 
     const pendingInvoice = useMemo(
-        () => bookings.find((booking) => booking.status !== "Paid" && booking.status !== "Completed"),
+        () => bookings.find((booking) => booking.payment_status !== "Paid" && booking.status !== "Paid" && booking.status !== "Completed"),
         [bookings],
     );
 
@@ -73,12 +95,9 @@ export default function PaymentOverview({ bookings = [] }: PaymentOverviewProps)
                 </div>
             </div>
 
-            <div className="h-[120px] w-full relative z-10 -ml-4">
-                {!mounted ? (
-                    <div className="h-full w-full rounded-2xl border border-white/10 bg-white/5 animate-pulse" />
-                ) : (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={120}>
-                    <AreaChart data={data}>
+            <div ref={chartRef} className="h-30 w-full relative z-10 -ml-4">
+                {chartWidth > 0 ? (
+                    <AreaChart width={chartWidth} height={120} data={data}>
                         <defs>
                             <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#00FFA3" stopOpacity={0.3}/>
@@ -91,7 +110,8 @@ export default function PaymentOverview({ bookings = [] }: PaymentOverviewProps)
                         />
                         <Area type="monotone" dataKey="total" stroke="#00FFA3" strokeWidth={2} fillOpacity={1} fill="url(#colorTotal)" />
                     </AreaChart>
-                </ResponsiveContainer>
+                ) : (
+                    <div className="h-full w-full rounded-2xl border border-dashed border-white/10 bg-white/5 animate-pulse" />
                 )}
             </div>
 

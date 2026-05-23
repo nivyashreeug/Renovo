@@ -16,6 +16,15 @@ type Notification = {
   related_id?: string
 }
 
+type BookingNotificationRow = {
+  id: string
+  customer_name?: string | null
+  status?: string | null
+  created_at?: string | null
+  service_type?: string | null
+  booking_date?: string | null
+}
+
 export default function TechnicianNotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
@@ -33,7 +42,7 @@ export default function TechnicianNotificationsPage() {
           .order("created_at", { ascending: false })
           .limit(50)
 
-        const rows = (res.data ?? []) as any[]
+        const rows = (res.data ?? []) as BookingNotificationRow[]
         if (!mounted) return
 
         // Convert bookings to notifications
@@ -90,13 +99,13 @@ export default function TechnicianNotificationsPage() {
     const channel = supabase
       .channel("public:bookings:notifications")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "bookings" }, (payload) => {
-        const newBooking = payload.new as any
+        const newBooking = payload.new as BookingNotificationRow
         const newNotif: Notification = {
           id: newBooking.id,
           type: "assignment",
           title: "New Repair Assignment",
           message: `${newBooking.customer_name || "Customer"} booked a ${newBooking.service_type || "repair"}`,
-          created_at: newBooking.created_at,
+          created_at: String(newBooking.created_at || ""),
           read: false,
           related_id: newBooking.id,
         }

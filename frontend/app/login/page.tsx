@@ -3,6 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import {
+    resolveDashboardRouteForUser,
+    syncProfileFromAuthUser,
+} from "@/lib/dashboard-routing";
 import { supabase } from "@/lib/supabase";
 import {
     ArrowLeft,
@@ -14,6 +19,7 @@ import {
 } from "lucide-react";
 
 export default function LoginPage() {
+    const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
@@ -39,23 +45,40 @@ export default function LoginPage() {
             return;
         }
 
-        console.log("Logged in user:", data.user);
+        const currentUser = data.user ?? data.session?.user ?? (await supabase.auth.getUser()).data.user;
+
+        if (!currentUser) {
+            setError("Login succeeded, but session is not ready yet. Please try again.");
+            setLoading(false);
+            return;
+        }
+
+        await syncProfileFromAuthUser(
+            currentUser,
+            currentUser.user_metadata?.full_name as string | null,
+            currentUser.user_metadata?.role as string | null
+        );
+
+        const targetRoute = await resolveDashboardRouteForUser(
+            currentUser.id,
+            currentUser.user_metadata?.role as string | null
+        );
+
+        router.replace(targetRoute);
 
         setLoading(false);
-
-        window.location.href = "/dashboard";
     };
 
     return (
         <main className="relative min-h-screen overflow-hidden bg-[#050816] text-white flex items-center justify-center px-6 py-10">
             {/* BACKGROUND GLOW */}
             <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[#5227FF]/20 blur-[140px] rounded-full" />
-                <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-cyan-500/20 blur-[140px] rounded-full" />
+                <div className="absolute top-0 left-0 w-125 h-125 bg-[#5227FF]/20 blur-[140px] rounded-full" />
+                <div className="absolute bottom-0 right-0 w-125 h-125 bg-cyan-500/20 blur-[140px] rounded-full" />
             </div>
 
             {/* GRID OVERLAY */}
-            <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[size:40px_40px]" />
+            <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-size-[40px_40px]" />
 
             {/* MAIN CONTAINER */}
             <div className="relative z-10 w-full max-w-7xl grid lg:grid-cols-2 gap-10 items-center">
@@ -78,7 +101,7 @@ export default function LoginPage() {
                     {/* TITLE */}
                     <h1 className="text-6xl xl:text-7xl font-black leading-tight tracking-tight">
                         Welcome Back to
-                        <span className="block bg-gradient-to-r from-[#5227FF] to-cyan-400 bg-clip-text text-transparent">
+                        <span className="block bg-linear-to-r from-[#5227FF] to-cyan-400 bg-clip-text text-transparent">
                             RENOVA
                         </span>
                     </h1>
@@ -152,7 +175,7 @@ export default function LoginPage() {
                     className="relative"
                 >
                     {/* GLOW */}
-                    <div className="absolute -inset-1 rounded-[40px] bg-gradient-to-r from-[#5227FF]/40 to-cyan-400/40 blur-2xl opacity-50" />
+                    <div className="absolute -inset-1 rounded-[40px] bg-linear-to-r from-[#5227FF]/40 to-cyan-400/40 blur-2xl opacity-50" />
 
                     {/* CARD */}
                     <div className="relative rounded-[40px] border border-white/10 bg-white/5 backdrop-blur-2xl p-8 md:p-12 shadow-[0_0_80px_rgba(82,39,255,0.2)]">
@@ -248,7 +271,7 @@ export default function LoginPage() {
                                 whileTap={{ scale: 0.98 }}
                                 type="submit"
                                 disabled={loading}
-                                className="relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-[#5227FF] to-cyan-400 py-4 font-semibold text-white shadow-[0_0_50px_rgba(82,39,255,0.4)]"
+                                className="relative w-full overflow-hidden rounded-2xl bg-linear-to-r from-[#5227FF] to-cyan-400 py-4 font-semibold text-white shadow-[0_0_50px_rgba(82,39,255,0.4)]"
                             >
                                 <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-500 bg-white/10" />
 

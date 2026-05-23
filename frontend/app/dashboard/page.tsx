@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
-import { supabase } from "@/lib/supabase";
+import { resolveDashboardRouteForUser } from "@/lib/dashboard-routing";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 
@@ -19,37 +19,12 @@ export default function DashboardPage() {
                     return;
                 }
 
-                // Try to get role from user_metadata first
-                let role = user.user_metadata?.role;
-                console.log("Role from user_metadata:", role);
-                
-                // If not in metadata, fetch from profiles table
-                if (!role) {
-                    console.log("Fetching role from profiles table...");
-                    const { data: profile, error } = await supabase
-                        .from('profiles')
-                        .select('role')
-                        .eq('id', user.id)
-                        .single();
-                        
-                    if (error) {
-                        console.error("Error fetching profile:", error);
-                    }
-                        
-                    if (profile) {
-                        role = profile.role;
-                        console.log("Role from profiles table:", role);
-                    }
-                }
-                
-                console.log("Final resolved role:", role);
-                
-                // Redirect based on role (case-insensitive)
-                if (role && role.toLowerCase() === "technician") {
-                    router.push("/dashboard/technician");
-                } else {
-                    router.push("/dashboard/customer");
-                }
+                const targetRoute = await resolveDashboardRouteForUser(
+                    user.id,
+                    user.user_metadata?.role
+                );
+
+                router.push(targetRoute);
             }
         };
         

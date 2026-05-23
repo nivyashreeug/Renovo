@@ -9,11 +9,7 @@ type ChartPoint = { date: string; value: number }
 export default function EarningsAnalytics() {
   const [data, setData] = useState<ChartPoint[]>([])
   const [summary, setSummary] = useState({ today: 0, week: 0, month: 0, completed: 0, rating: 4.9 })
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const [mounted] = useState(true)
 
   useEffect(() => {
     let mounted = true

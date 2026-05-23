@@ -1,10 +1,11 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { 
   Star, ShieldCheck, MapPin, CheckCircle2, 
-  ChevronRight, Wrench, Snowflake, Smartphone, Zap, Activity, Clock, Briefcase, TrendingUp, Users
+  ChevronRight, Wrench, Snowflake, Smartphone, Zap, Activity, Briefcase, TrendingUp
 } from "lucide-react";
 
 const technicians = [
@@ -113,7 +114,7 @@ export default function TechnicianSection() {
                 <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-br from-[#00F5FF] to-[#5227FF] mb-4 group-hover:scale-105 transition-transform duration-500 shadow-[0_0_30px_rgba(0,245,255,0.3)]">
                   <div className="w-full h-full rounded-full overflow-hidden bg-[#050816]">
                     {/* Placeholder image, assuming tech.image is accessible */}
-                    <img src={tech.image} alt={tech.name} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+                    <Image src={tech.image} alt={tech.name} width={96} height={96} unoptimized className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </div>
                 <h3 className="text-2xl font-bold text-white mb-1 group-hover:text-[#00F5FF] transition-colors">{tech.name}</h3>
@@ -198,7 +199,7 @@ export default function TechnicianSection() {
                 <div>
                   <h4 className="text-white font-bold text-lg">Booking Confirmed</h4>
                   <p className="text-xs text-[#00FFA3] mt-1 flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#00FFA3] animate-pulse" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00FFA3] animate-pulse" />
                     Connecting to technician
                   </p>
                 </div>
@@ -209,7 +210,7 @@ export default function TechnicianSection() {
               </div>
 
               <div className="flex items-center gap-4 bg-white/5 rounded-2xl p-4 border border-white/5">
-                <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Arjun" className="w-14 h-14 rounded-xl object-cover border border-[#5227FF]" />
+                <Image src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Arjun" width={56} height={56} unoptimized className="w-14 h-14 rounded-xl object-cover border border-[#5227FF]" />
                 <div className="flex-1">
                   <h5 className="text-white font-bold flex items-center gap-2">
                     Arjun Mehta
@@ -257,7 +258,7 @@ export default function TechnicianSection() {
 
             <div className="grid grid-cols-2 gap-4 relative z-10">
               <div className="bg-white/5 rounded-2xl p-4 border border-white/5 hover:border-[#00F5FF]/30 transition-colors">
-                <p className="text-white/40 text-xs font-semibold mb-2">Today's Earnings</p>
+                <p className="text-white/40 text-xs font-semibold mb-2">Today&apos;s Earnings</p>
                 <p className="text-3xl font-bold text-white tracking-tight flex items-center gap-2">
                   ₹4,250
                   <TrendingUp className="w-4 h-4 text-[#00FFA3]" />

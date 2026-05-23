@@ -1,11 +1,12 @@
 "use client"
 
-import React, { useMemo, useState } from "react"
+import React, { useMemo, useState, useCallback } from "react"
 import { motion } from "framer-motion"
 import { CheckCircle2, MessageSquare, Navigation2, Wrench } from "lucide-react"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { TechnicianJob, TECHNICIAN_STAGES, formatRelativeTime, nextStatus, stageIndex, statusTone } from "./technician-utils"
+import { useAuth } from "@/providers/AuthProvider"
 
 type Props = {
   job: TechnicianJob | null
@@ -13,10 +14,45 @@ type Props = {
 }
 
 export default function StatusUpdater({ job, onUpdated }: Props) {
-  const [note, setNote] = useState("")
+  const [draftNote, setDraftNote] = useState<{ jobId: string; value: string }>({ jobId: "", value: "" })
   const [saving, setSaving] = useState(false)
+  const { user } = useAuth()
 
   const currentStage = useMemo(() => stageIndex(job?.status), [job?.status])
+
+  const note = useMemo(() => {
+    if (!job) return ""
+    return draftNote.jobId === String(job.id) ? draftNote.value : String(job.repair_notes || "")
+  }, [draftNote, job])
+
+  const updateBooking = useCallback(async (status: string) => {
+    if (!job) return
+
+    setSaving(true)
+    const snapshot = { ...job }
+    const nextRepairNotes = note.trim() || job.repair_notes || null
+    onUpdated?.({ ...job, status, repair_notes: nextRepairNotes })
+
+    const payload: Record<string, unknown> = {
+      status,
+      last_updated_at: new Date().toISOString(),
+      technician_id: user?.id ?? job.technician_id ?? null,
+      repair_notes: nextRepairNotes,
+    }
+
+    const { error } = await supabase.from("bookings").update(payload).eq("id", job.id)
+
+    if (error) {
+      onUpdated?.(snapshot)
+      toast.error("Could not update booking status.")
+      setSaving(false)
+      return
+    }
+
+    setDraftNote({ jobId: String(job.id), value: String(nextRepairNotes || "") })
+    toast.success(`Status updated to ${status}`)
+    setSaving(false)
+  }, [job, note, onUpdated, user])
 
   if (!job) {
     return (
@@ -24,30 +60,6 @@ export default function StatusUpdater({ job, onUpdated }: Props) {
         Select a job to manage live status, ETA, and repair actions.
       </div>
     )
-  }
-
-  const updateBooking = async (status: string) => {
-    setSaving(true)
-    const snapshot = { ...job }
-    onUpdated?.({ ...job, status })
-
-    const payload: Record<string, unknown> = {
-      status,
-      last_updated_at: new Date().toISOString(),
-    }
-
-    if (note.trim()) payload.repair_notes = note.trim()
-
-    const { error } = await supabase.from("bookings").update(payload).eq("id", job.id)
-
-    setSaving(false)
-    if (error) {
-      onUpdated?.(snapshot)
-      toast.error("Could not update booking status.")
-      return
-    }
-
-    toast.success(`Status updated to ${status}`)
   }
 
   const tone = statusTone(job.status as string)
@@ -102,7 +114,7 @@ export default function StatusUpdater({ job, onUpdated }: Props) {
           </div>
           <textarea
             value={note}
-            onChange={(event) => setNote(event.target.value)}
+            onChange={(event) => setDraftNote({ jobId: String(job.id), value: event.target.value })}
             placeholder="Add technician notes, customer updates, or parts required..."
             className="mt-3 min-h-[100px] w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80 outline-none placeholder:text-white/30 focus:border-[#00F5FF]/30"
           />

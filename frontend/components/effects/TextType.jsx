@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, createElement, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { gsap } from 'gsap';
 import './TextType.css';
 
@@ -150,24 +150,40 @@ const TextType = ({
   const shouldHideCursor =
     hideCursorWhileTyping && (currentCharIndex < textArray[currentTextIndex].length || isDeleting);
 
-  return createElement(
-    Component,
-    {
-      ref: containerRef,
-      className: `text-type ${className}`,
-      ...props
-    },
-    <span className="text-type__content" style={{ color: getCurrentTextColor() || 'inherit' }}>
-      {displayedText}
-    </span>,
-    showCursor && (
-      <span
-        ref={cursorRef}
-        className={`text-type__cursor ${cursorClassName} ${shouldHideCursor ? 'text-type__cursor--hidden' : ''}`}
-      >
-        {cursorCharacter}
+  const content = (
+    <>
+      <span className="text-type__content" style={{ color: getCurrentTextColor() || 'inherit' }}>
+        {displayedText}
       </span>
-    )
+      {showCursor && (
+        <span
+          ref={cursorRef}
+          className={`text-type__cursor ${cursorClassName} ${shouldHideCursor ? 'text-type__cursor--hidden' : ''}`}
+        >
+          {cursorCharacter}
+        </span>
+      )}
+    </>
+  );
+
+  if (typeof Component === 'string') {
+    const Tag = Component;
+
+    return (
+      <Tag ref={containerRef} className={`text-type ${className}`} {...props}>
+        {content}
+      </Tag>
+    );
+  }
+
+  const CustomComponent = Component;
+
+  return (
+    <div ref={containerRef}>
+      <CustomComponent className={`text-type ${className}`} {...props}>
+        {content}
+      </CustomComponent>
+    </div>
   );
 };
 

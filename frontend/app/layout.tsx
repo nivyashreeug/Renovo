@@ -1,15 +1,10 @@
 import type { Metadata } from "next";
-import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
 import { AuthProvider } from "@/providers/AuthProvider";
+import { NotificationProvider } from "@/providers/NotificationProvider";
+import NotificationDropdown from "@/components/NotificationDropdown";
 import { Toaster } from "sonner";
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space-grotesk",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "RENOVA",
@@ -22,22 +17,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable}`}>
+    <html lang="en">
       <body className="font-sans antialiased">
         <AuthProvider>
-          {children}
-          <Toaster
-            richColors
-            closeButton
-            position="top-right"
-            toastOptions={{
-              style: {
-                background: "#0b1020",
-                color: "#ffffff",
-                border: "1px solid rgba(255,255,255,0.12)",
-              },
-            }}
-          />
+          <NotificationProvider>
+            <div className="fixed top-4 right-4 z-50">
+              <NotificationDropdown />
+            </div>
+            {children}
+            <Toaster
+              richColors
+              closeButton
+              position="top-right"
+              toastOptions={{
+                style: {
+                  background: "#0b1020",
+                  color: "#ffffff",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                },
+              }}
+            />
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>

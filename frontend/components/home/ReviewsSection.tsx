@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
-import { Star, CheckCircle, ShieldCheck, Wrench, Zap, Clock, Smartphone, Cpu } from "lucide-react";
-import gsap from "gsap";
+import React, { useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { CheckCircle, ShieldCheck, Smartphone, Star, Wrench, Zap } from "lucide-react";
 import Image from "next/image";
 
 const TESTIMONIALS = [
@@ -47,7 +46,7 @@ const TESTIMONIALS = [
     id: 5,
     name: "Siddharth Rao",
     service: "Home Appliance",
-    text: "Fastest repair service I've ever used. The glowing UI is just the cherry on top of great service.",
+    text: "Fastest repair service I’ve ever used. The glowing UI is just the cherry on top of great service.",
     rating: 5,
     status: "Completed",
     avatar: "https://i.pravatar.cc/150?img=12",
@@ -70,9 +69,12 @@ const ReviewCard = ({ testimonial }: { testimonial: typeof TESTIMONIALS[0] }) =>
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <img
+              <Image
                 src={testimonial.avatar}
                 alt={testimonial.name}
+                width={56}
+                height={56}
+                unoptimized
                 className="w-14 h-14 rounded-full border-2 border-[#5227FF]/50"
               />
               <div className="absolute -bottom-1 -right-1 bg-[#00FFA3] rounded-full p-0.5 border-2 border-[#050816]">
@@ -102,7 +104,7 @@ const ReviewCard = ({ testimonial }: { testimonial: typeof TESTIMONIALS[0] }) =>
 
         {/* Review Text */}
         <p className="text-white/70 text-base leading-relaxed flex-grow">
-          "{testimonial.text}"
+          &quot;{testimonial.text}&quot;
         </p>
 
         {/* Footer / Before-After Indicator */}
@@ -275,7 +277,7 @@ export default function ReviewsSection() {
           transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
           className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto"
         >
-          Real experiences from customers powered by RENOVA's premium repair ecosystem.
+          Real experiences from customers powered by RENOVA&apos;s premium repair ecosystem.
         </motion.p>
       </div>
 
@@ -296,7 +298,7 @@ export default function ReviewsSection() {
         >
           {/* Double the items for seamless loop */}
           {[...TESTIMONIALS, ...TESTIMONIALS].map((testimonial, i) => (
-            <ReviewCard key={i} testimonial={testimonial} />
+            <ReviewCard key={`${testimonial.id}-${i}`} testimonial={testimonial} />
           ))}
         </motion.div>
       </div>

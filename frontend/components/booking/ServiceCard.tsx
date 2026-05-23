@@ -1,21 +1,19 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { DivideIcon as LucideIcon } from "lucide-react";
+import { type LucideIcon } from "lucide-react";
 
 interface ServiceCardProps {
-  id: string;
   title: string;
   description: string;
   price: string;
   time: string;
-  icon: any;
+  icon: LucideIcon;
   isSelected: boolean;
   onClick: () => void;
 }
 
 export function ServiceCard({
-  id,
   title,
   description,
   price,
