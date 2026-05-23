@@ -1,28 +1,33 @@
+const PROD_URL = "https://renovo-gilt.vercel.app";
+
 export function getBaseUrl() {
   if (typeof window !== "undefined") {
     return window.location.origin;
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  return process.env.NEXT_PUBLIC_SITE_URL || PROD_URL;
+}
 
-  if (!siteUrl) {
-    return "";
-  }
+export function buildAuthUrl(path: string) {
+  const base = getBaseUrl();
 
   try {
-    return new URL(siteUrl).origin;
+    return new URL(path, base).toString();
   } catch {
-    return "";
+    return `${PROD_URL}${path}`;
   }
 }
 
-export function buildAuthUrl(pathname: string) {
-  const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
-  const baseUrl = getBaseUrl();
+export function validateAuthUrl(url: string, context: string) {
+  try {
+    const parsed = new URL(url);
 
-  if (!baseUrl) {
-    return "";
+    if (!parsed.origin || !parsed.protocol.startsWith("http")) {
+      throw new Error("Non-http origin");
+    }
+
+    return parsed.toString();
+  } catch {
+    throw new Error(`Invalid auth redirect URL for ${context}: ${url}`);
   }
-
-  return new URL(normalizedPath, baseUrl).toString();
 }

@@ -14,7 +14,7 @@ import {
   getDashboardRouteFromRole,
   syncProfileFromAuthUser,
 } from "@/lib/dashboard-routing";
-import { buildAuthUrl } from "@/lib/auth-urls";
+import { buildAuthUrl, validateAuthUrl } from "@/lib/auth-urls";
 import { supabase } from "@/lib/supabase";
 
 export default function SignupPage() {
@@ -106,11 +106,7 @@ export default function SignupPage() {
     setIsSubmitting(true);
 
     try {
-      const loginRedirectUrl = "https://renovo-gilt.vercel.app/login/callback";
-
-      if (!loginRedirectUrl) {
-        throw new Error("Missing base URL for auth redirects. Set NEXT_PUBLIC_SITE_URL in production.");
-      }
+      const loginRedirectUrl = validateAuthUrl(buildAuthUrl("/login"), "signup emailRedirectTo");
 
       // CREATE AUTH USER
       const { data, error } =
