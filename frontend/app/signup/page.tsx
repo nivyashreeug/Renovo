@@ -14,6 +14,7 @@ import {
   getDashboardRouteFromRole,
   syncProfileFromAuthUser,
 } from "@/lib/dashboard-routing";
+import { buildAuthUrl } from "@/lib/auth-urls";
 import { supabase } from "@/lib/supabase";
 
 export default function SignupPage() {
@@ -105,10 +106,11 @@ export default function SignupPage() {
     setIsSubmitting(true);
 
     try {
-      const siteUrl =
-        typeof window !== "undefined"
-          ? window.location.origin
-          : process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+      const loginRedirectUrl = buildAuthUrl("/login");
+
+      if (!loginRedirectUrl) {
+        throw new Error("Missing base URL for auth redirects. Set NEXT_PUBLIC_SITE_URL in production.");
+      }
 
       // CREATE AUTH USER
       const { data, error } =
@@ -117,7 +119,7 @@ export default function SignupPage() {
           password: formData.password,
 
           options: {
-            emailRedirectTo: `${siteUrl}/login`,
+            emailRedirectTo: loginRedirectUrl,
 
             data: {
               full_name: formData.fullName,
